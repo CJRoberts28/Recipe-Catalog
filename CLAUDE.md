@@ -21,6 +21,8 @@ This is a fully static single-page app hosted on GitHub Pages. There is no tradi
 GitHub Pages (static)
 ├── index.html        — entire frontend SPA (HTML + CSS + JS in one file)
 ├── favicon.svg       — custom C&L monogram icon
+├── firebase.json     — Firebase project config (deploy from repo root)
+├── .firebaserc       — Firebase project alias (cmlb-recipes)
 ├── CLAUDE.md         — this file
 └── README.md         — user-facing documentation
 
@@ -71,9 +73,9 @@ The function is a simple POST proxy: it receives {system, messages} from the fro
 
 To redeploy after changes:
 ```bash
-cd cmlb-functions
 firebase deploy --only functions
 ```
+(Run from the repo root — `firebase.json` and `.firebaserc` are now checked in.)
 
 ### Auth
 Google OAuth only. Whitelisted emails:
