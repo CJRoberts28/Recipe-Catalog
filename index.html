@@ -212,6 +212,13 @@
       .back-btn::before { content:'←'; font-size:16px; }
     }
     @media (min-width:768px) { .back-btn { display:none; } }
+    @media print {
+      body::before, .sidebar, .chat-panel, .bottom-nav, .action-row, .back-btn, .success-msg { display:none !important; }
+      .app { display:block; }
+      .main { padding:0; margin:0; border:none; box-shadow:none; }
+      .recipe-title { font-size:24px; margin-bottom:8px; }
+      .component { break-inside:avoid; }
+    }
   </style>
 </head>
 <body>
@@ -334,6 +341,17 @@ onAuthStateChanged(auth, async (user) => {
     state.user = user;
     await loadRecipes();
     initNotifications(); // intentionally non-blocking
+    // Handle deep links from notification clicks
+    const params = new URLSearchParams(window.location.search);
+    const notifRecipeId = params.get('recipeId');
+    const notifChat = params.get('chat');
+    if (notifRecipeId) {
+      const r = state.recipes.find(r => r.id === notifRecipeId);
+      if (r) { state.selected = r; state.view = 'detail'; mobilePanel = 'detail'; }
+    } else if (notifChat) {
+      state.showChat = true;
+      mobilePanel = 'chat';
+    }
     render();
   } else {
     state.user = null;
@@ -415,6 +433,10 @@ function renderNotifPanel() {
     </div>
     <label style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);">Time (Eastern)</label>
     <select id="notif-hour" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--text);padding:6px 8px;font-family:'Lora',serif;font-size:13px;margin-top:4px;outline:none;">${hourOpts.join('')}</select>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px;">
+      <div style="font-size:11px;color:var(--text-muted);">Next send: <span style="color:var(--text);">${s.enabled ? (() => { const h = s.hour; return h === 12 ? '12:00 PM' : h < 12 ? `${h}:00 AM` : `${h-12}:00 PM`; })() + ' Eastern' : 'Off'}</span></div>
+      <div style="font-size:11px;color:var(--text-muted);">Last sent: <span style="color:var(--text);">${s.lastSent || 'Never'}</span></div>
+    </div>
     <p style="font-size:11px;color:var(--text-dim);margin-top:6px;font-style:italic;">iPhone: add to Home Screen first (iOS 16.4+)</p>` : ''}
   </div>`;
 }
@@ -718,6 +740,7 @@ function renderDetail(r) {
     <div class="action-row">
       <button class="btn" id="edit-btn">✎ Edit</button>
       <button class="btn btn-danger" id="del-btn">✕ Delete</button>
+      <button class="btn" id="print-btn">⎙ Print</button>
     </div>
     <h1 class="recipe-title">${esc(r.title)}</h1>
     <div class="recipe-meta-row">
@@ -841,6 +864,7 @@ function bindEvents() {
   g("close-chat")?.addEventListener("click",()=>{state.showChat=false;mobilePanel=state.selected?"detail":"list";render();});
   g("edit-btn")?.addEventListener("click",()=>startEdit(state.selected));
   g("del-btn")?.addEventListener("click",()=>deleteRecipe(state.selected.id));
+  g("print-btn")?.addEventListener("click",()=>window.print());
   on(".star","click",e=>{
     state.form.rating=+e.currentTarget.dataset.n;
     document.querySelectorAll(".star").forEach((s,i)=>s.classList.toggle("lit",i<state.form.rating));

@@ -20,11 +20,19 @@ const messaging = firebase.messaging();
 // Handle background messages (app tab closed or not focused)
 messaging.onBackgroundMessage(function(payload) {
   const title = payload.notification?.title || 'CMLB Recipes';
+  const baseUrl = 'https://cjroberts28.github.io/cmlbRecipes/';
+  const recipeId = payload.data?.recipeId;
+  const type = payload.data?.type;
+  const url = recipeId
+    ? baseUrl + '?recipeId=' + recipeId
+    : type === 'new_idea'
+      ? baseUrl + '?chat=1'
+      : baseUrl;
   const options = {
     body: payload.notification?.body || "Tonight's dinner suggestion is ready.",
     icon: '/cmlbRecipes/favicon.svg',
     badge: '/cmlbRecipes/favicon.svg',
-    data: { url: 'https://cjroberts28.github.io/cmlbRecipes/' }
+    data: { url }
   };
   self.registration.showNotification(title, options);
 });

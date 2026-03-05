@@ -87,10 +87,11 @@ exports.sendDinnerSuggestion = onSchedule(
     }
 
     // 2. Check current hour in America/New_York
-    const nowNY = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
-    const nyDate = new Date(nowNY);
-    const currentHour = nyDate.getHours();
-    const todayStr = nyDate.toLocaleDateString("en-CA"); // "YYYY-MM-DD"
+    const now = new Date();
+    const currentHour = parseInt(
+      new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now)
+    );
+    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(now); // "YYYY-MM-DD"
 
     if (currentHour !== settings.hour) {
       console.log(`Hour mismatch: current=${currentHour}, configured=${settings.hour}. Skipping.`);
@@ -163,13 +164,26 @@ Do not include JSON or recipe tags. Be warm and direct.`;
 
     console.log("Suggestion:", suggestion);
 
-    // 8. Send FCM multicast notification to all registered users
+    // 8. Check if suggestion references an existing recipe for deep linking
+    const mentionedRecipe = recipes.find(r =>
+      suggestion.toLowerCase().includes(r.title.toLowerCase())
+    );
+    const baseUrl = "https://cjroberts28.github.io/cmlbRecipes/";
+    const deepLink = mentionedRecipe
+      ? `${baseUrl}?recipeId=${mentionedRecipe.id}`
+      : `${baseUrl}?chat=1`;
+    const notifData = mentionedRecipe
+      ? { type: "existing_recipe", recipeId: mentionedRecipe.id }
+      : { type: "new_idea" };
+
+    // 9. Send FCM multicast notification to all registered users
     const notifBody = suggestion.length > 180 ? suggestion.slice(0, 177) + "..." : suggestion;
     const fcmPayload = {
       notification: {
         title: "Tonight's Dinner Idea",
         body: notifBody,
       },
+      data: notifData,
       webpush: {
         notification: {
           icon: "https://cjroberts28.github.io/cmlbRecipes/favicon.svg",
@@ -177,7 +191,7 @@ Do not include JSON or recipe tags. Be warm and direct.`;
           requireInteraction: false,
         },
         fcmOptions: {
-          link: "https://cjroberts28.github.io/cmlbRecipes/",
+          link: deepLink,
         },
       },
       tokens,
@@ -186,7 +200,7 @@ Do not include JSON or recipe tags. Be warm and direct.`;
     const fcmResponse = await admin.messaging().sendEachForMulticast(fcmPayload);
     console.log(`FCM: ${fcmResponse.successCount} sent, ${fcmResponse.failureCount} failed`);
 
-    // 9. Remove stale/invalid tokens (expired or unregistered)
+    // 10. Remove stale/invalid tokens (expired or unregistered)
     const staleUids = [];
     fcmResponse.responses.forEach((resp, idx) => {
       if (!resp.success) {
@@ -209,7 +223,7 @@ Do not include JSON or recipe tags. Be warm and direct.`;
       console.log(`Removed ${staleUids.length} stale token(s)`);
     }
 
-    // 10. Update lastSent to prevent duplicate sends today
+    // 11. Update lastSent to prevent duplicate sends today
     await settingsRef.update({ lastSent: todayStr });
     console.log(`Done. Dinner suggestion sent for ${todayStr}.`);
   }
