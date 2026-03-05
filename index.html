@@ -214,8 +214,8 @@
     @media (min-width:768px) { .back-btn { display:none; } }
     @media print {
       body::before, .sidebar, .chat-panel, .bottom-nav, .action-row, .back-btn, .success-msg { display:none !important; }
-      .app { display:block; }
-      .main { padding:0; margin:0; border:none; box-shadow:none; }
+      .app { display:block; overflow:visible; height:auto; }
+      .main { padding:0; margin:0; border:none; box-shadow:none; overflow:visible; height:auto; }
       .recipe-title { font-size:24px; margin-bottom:8px; }
       .component { break-inside:avoid; }
     }
