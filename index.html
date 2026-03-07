@@ -91,7 +91,9 @@
     /* Recipe detail */
     .recipe-title-wrap { text-align:center; margin-bottom:20px; padding:16px 0 14px; border-top:2px solid var(--border); border-bottom:1px solid var(--border); }
     .recipe-title-wrap::before { content:'✦'; display:block; font-size:11px; color:var(--accent-light); letter-spacing:.3em; margin-bottom:10px; }
-    .recipe-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:400; font-style:italic; color:var(--text); line-height:1.25; margin:0; }
+    .recipe-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:400; font-style:italic; color:var(--text); line-height:1.25; margin:0 0 6px; }
+    .chef-alias { font-family:'Playfair Display',serif; font-size:13px; font-style:italic; color:var(--text-muted); letter-spacing:.04em; }
+    .chef-alias--pending { color:var(--text-dim); font-style:italic; font-size:12px; }
     .recipe-meta-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:22px; padding-bottom:20px; border-bottom:1px solid var(--border); }
     .meta-pill { background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); font-size:11px; padding:3px 12px; border-radius:20px; font-family:'Lora',serif; }
     .meta-pill.category { color:var(--accent); border-color:var(--accent-light); background:var(--accent-pale); }
@@ -473,7 +475,11 @@ async function saveRecipe() {
       steps: c.steps.filter(Boolean)
     })),
     createdBy: state.user.email,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // Clear alias when title changes so it gets regenerated on next view
+    chefAlias: (state.editingId && state.selected?.title === f.title)
+      ? (state.selected?.chefAlias || null)
+      : null
   };
   const btn = document.getElementById("save-btn");
   if(btn){btn.disabled=true;btn.textContent="Saving...";}
@@ -507,7 +513,38 @@ async function deleteRecipe(id) {
   render();
 }
 
-// ── Claude Chat ───────────────────────────────────────────
+// ── Chef Alias ─────────────────────────────────────────────
+let aliasPending = new Set(); // prevent duplicate in-flight requests
+
+async function generateChefAlias(recipe) {
+  if (aliasPending.has(recipe.id)) return;
+  aliasPending.add(recipe.id);
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({
+        system: "You are a Michelin-starred chef with a flair for dramatic menu writing. Respond with only the alias — no explanation, no punctuation at the end.",
+        messages: [{
+          role: "user",
+          content: `Give "${recipe.title}" a single professional chef alias using elevated culinary language — think gastrique, confit, en papillote, brunoise, amuse-bouche, jus lié, etc. Be creative and specific to the dish. One line only.`
+        }]
+      })
+    });
+    const data = await res.json();
+    const alias = data.content?.[0]?.text?.trim();
+    if (alias) {
+      await updateDoc(doc(db, "recipes", recipe.id), { chefAlias: alias });
+      state.recipes = state.recipes.map(r => r.id === recipe.id ? {...r, chefAlias: alias} : r);
+      if (state.selected?.id === recipe.id) state.selected = {...state.selected, chefAlias: alias};
+      render();
+    }
+  } catch(e) { console.warn("Chef alias generation failed:", e); }
+  finally { aliasPending.delete(recipe.id); }
+}
+
+
 async function sendChat(message) {
   state.chatMessages.push({role:"user", content:message});
   state.chatLoading = true;
@@ -733,6 +770,11 @@ function render() {
 
   bindEvents();
 
+  // Generate chef alias if viewing a recipe that doesn't have one yet
+  if (state.selected && state.view === 'detail' && !state.selected.chefAlias) {
+    generateChefAlias(state.selected);
+  }
+
   // Scroll chat to bottom after render
   const cm = document.getElementById("chat-messages");
   if(cm) cm.scrollTop = cm.scrollHeight;
@@ -748,7 +790,13 @@ function renderDetail(r) {
       <button class="btn" id="print-btn">⎙ Print</button>
       <button class="btn" id="share-btn">⎘ Share</button>
     </div>
-    <div class="recipe-title-wrap"><h1 class="recipe-title">${esc(r.title)}</h1></div>
+    <div class="recipe-title-wrap">
+      <h1 class="recipe-title">${esc(r.title)}</h1>
+      ${r.chefAlias
+        ? `<div class="chef-alias">${esc(r.chefAlias)}</div>`
+        : `<div class="chef-alias chef-alias--pending">generating alias…</div>`
+      }
+    </div>
     <div class="recipe-meta-row">
       <span class="big-stars">${stars(r.rating)}</span>
       ${r.category?`<span class="meta-pill category">${esc(r.category)}</span>`:''}
