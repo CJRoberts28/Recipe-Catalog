@@ -89,7 +89,11 @@
     .empty-state p { font-size:15px; font-style:italic; color:var(--text-dim); }
 
     /* Recipe detail */
-    .recipe-title { font-family:'Playfair Display',serif; font-size:30px; font-weight:400; font-style:italic; color:var(--text); line-height:1.25; margin-bottom:14px; }
+    .recipe-title-wrap { text-align:center; margin-bottom:20px; padding:16px 0 14px; border-top:2px solid var(--border); border-bottom:1px solid var(--border); }
+    .recipe-title-wrap::before { content:'✦'; display:block; font-size:11px; color:var(--accent-light); letter-spacing:.3em; margin-bottom:10px; }
+    .recipe-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:400; font-style:italic; color:var(--text); line-height:1.25; margin:0 0 6px; }
+    .chef-alias { font-family:'Playfair Display',serif; font-size:13px; font-style:italic; color:var(--text-muted); letter-spacing:.04em; }
+    .chef-alias--pending { color:var(--text-dim); font-style:italic; font-size:12px; }
     .recipe-meta-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:22px; padding-bottom:20px; border-bottom:1px solid var(--border); }
     .meta-pill { background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); font-size:11px; padding:3px 12px; border-radius:20px; font-family:'Lora',serif; }
     .meta-pill.category { color:var(--accent); border-color:var(--accent-light); background:var(--accent-pale); }
@@ -199,7 +203,7 @@
       .chat-panel.mobile-open .chat-input-row { position:absolute; bottom:0; left:0; right:0; z-index:2; }
       .component-grid { grid-template-columns:1fr; gap:16px; }
       .form-wrap { max-width:100%; }
-      .recipe-title { font-size:22px; }
+      .recipe-title { font-size:20px; }
       .bottom-nav { display:flex; position:fixed; bottom:0; left:0; right:0; z-index:300; background:var(--surface); border-top:1px solid var(--border); height:60px; }
       .bottom-nav button { flex:1; background:none; border:none; color:var(--text-muted); font-family:'Lora',serif; font-size:11px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; transition:color 0.15s; padding:0; }
       .bottom-nav button.active { color:var(--accent); }
@@ -216,7 +220,7 @@
       body::before, .sidebar, .chat-panel, .bottom-nav, .action-row, .back-btn, .success-msg { display:none !important; }
       .app { display:block; overflow:visible; height:auto; }
       .main { padding:0; margin:0; border:none; box-shadow:none; overflow:visible; height:auto; }
-      .recipe-title { font-size:24px; margin-bottom:8px; }
+      .recipe-title { font-size:24px; }
       .component { break-inside:avoid; }
     }
   </style>
@@ -405,7 +409,8 @@ async function requestNotifPermission() {
 }
 
 async function saveNotifSettings(enabled, hour) {
-  const newSettings = { enabled, hour: parseInt(hour), lastSent: state.notifSettings?.lastSent || '' };
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const newSettings = { enabled, hour: parseInt(hour), lastSent: state.notifSettings?.lastSent || '', timezone };
   state.notifSettings = newSettings; // update state immediately so UI doesn't revert
   try {
     await setDoc(doc(db, 'settings', 'notifications'), newSettings);
@@ -431,7 +436,7 @@ function renderNotifPanel() {
       <input type="checkbox" id="notif-toggle"${s.enabled ? ' checked' : ''} style="width:15px;height:15px;accent-color:var(--accent);">
       <label for="notif-toggle" style="font-size:13px;color:var(--text);cursor:pointer;font-family:'Lora',serif;">Send daily dinner ideas</label>
     </div>
-    <label style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);">Time (Eastern)</label>
+    <label style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);">Time (${Intl.DateTimeFormat().resolvedOptions().timeZone})</label>
     <select id="notif-hour" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--text);padding:6px 8px;font-family:'Lora',serif;font-size:13px;margin-top:4px;outline:none;">${hourOpts.join('')}</select>
     <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px;">
       <div style="font-size:11px;color:var(--text-muted);">Next send: <span style="color:var(--text);">${s.enabled ? (() => { const h = s.hour; return h === 12 ? '12:00 PM' : h < 12 ? `${h}:00 AM` : `${h-12}:00 PM`; })() + ' Eastern' : 'Off'}</span></div>
@@ -470,7 +475,11 @@ async function saveRecipe() {
       steps: c.steps.filter(Boolean)
     })),
     createdBy: state.user.email,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // Clear alias when title changes so it gets regenerated on next view
+    chefAlias: (state.editingId && state.selected?.title === f.title)
+      ? (state.selected?.chefAlias || null)
+      : null
   };
   const btn = document.getElementById("save-btn");
   if(btn){btn.disabled=true;btn.textContent="Saving...";}
@@ -504,7 +513,38 @@ async function deleteRecipe(id) {
   render();
 }
 
-// ── Claude Chat ───────────────────────────────────────────
+// ── Chef Alias ─────────────────────────────────────────────
+let aliasPending = new Set(); // prevent duplicate in-flight requests
+
+async function generateChefAlias(recipe) {
+  if (aliasPending.has(recipe.id)) return;
+  aliasPending.add(recipe.id);
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({
+        system: "You are a Michelin-starred chef with a flair for dramatic menu writing. Respond with only the alias — no explanation, no punctuation at the end.",
+        messages: [{
+          role: "user",
+          content: `Give "${recipe.title}" a single professional chef alias using elevated culinary language — think gastrique, confit, en papillote, brunoise, amuse-bouche, jus lié, etc. Be creative and specific to the dish. One line only.`
+        }]
+      })
+    });
+    const data = await res.json();
+    const alias = data.content?.[0]?.text?.trim();
+    if (alias) {
+      await updateDoc(doc(db, "recipes", recipe.id), { chefAlias: alias });
+      state.recipes = state.recipes.map(r => r.id === recipe.id ? {...r, chefAlias: alias} : r);
+      if (state.selected?.id === recipe.id) state.selected = {...state.selected, chefAlias: alias};
+      render();
+    }
+  } catch(e) { console.warn("Chef alias generation failed:", e); }
+  finally { aliasPending.delete(recipe.id); }
+}
+
+
 async function sendChat(message) {
   state.chatMessages.push({role:"user", content:message});
   state.chatLoading = true;
@@ -730,6 +770,11 @@ function render() {
 
   bindEvents();
 
+  // Generate chef alias if viewing a recipe that doesn't have one yet
+  if (state.selected && state.view === 'detail' && !state.selected.chefAlias) {
+    generateChefAlias(state.selected);
+  }
+
   // Scroll chat to bottom after render
   const cm = document.getElementById("chat-messages");
   if(cm) cm.scrollTop = cm.scrollHeight;
@@ -743,8 +788,15 @@ function renderDetail(r) {
       <button class="btn" id="edit-btn">✎ Edit</button>
       <button class="btn btn-danger" id="del-btn">✕ Delete</button>
       <button class="btn" id="print-btn">⎙ Print</button>
+      <button class="btn" id="share-btn">⎘ Share</button>
     </div>
-    <h1 class="recipe-title">${esc(r.title)}</h1>
+    <div class="recipe-title-wrap">
+      <h1 class="recipe-title">${esc(r.title)}</h1>
+      ${r.chefAlias
+        ? `<div class="chef-alias">${esc(r.chefAlias)}</div>`
+        : `<div class="chef-alias chef-alias--pending">generating alias…</div>`
+      }
+    </div>
     <div class="recipe-meta-row">
       <span class="big-stars">${stars(r.rating)}</span>
       ${r.category?`<span class="meta-pill category">${esc(r.category)}</span>`:''}
@@ -867,6 +919,13 @@ function bindEvents() {
   g("edit-btn")?.addEventListener("click",()=>startEdit(state.selected));
   g("del-btn")?.addEventListener("click",()=>deleteRecipe(state.selected.id));
   g("print-btn")?.addEventListener("click",()=>window.print());
+  g("share-btn")?.addEventListener("click",()=>{
+    const url=`https://cjroberts28.github.io/cmlbRecipes/?recipeId=${state.selected.id}`;
+    navigator.clipboard.writeText(url).then(()=>{
+      state.successMsg="Link copied to clipboard!";render();
+      setTimeout(()=>{state.successMsg=null;render();},3000);
+    });
+  });
   on(".star","click",e=>{
     state.form.rating=+e.currentTarget.dataset.n;
     document.querySelectorAll(".star").forEach((s,i)=>s.classList.toggle("lit",i<state.form.rating));
