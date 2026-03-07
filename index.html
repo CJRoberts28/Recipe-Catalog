@@ -56,8 +56,19 @@
     .signout-btn:hover { color:var(--red); }
     .add-btn { margin:10px 16px 4px; background:var(--accent); border:none; color:#faf7f2; padding:9px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:14px; font-style:italic; cursor:pointer; transition:background 0.2s; letter-spacing:0.02em; }
     .add-btn:hover { background:var(--accent-light); }
-    .chat-btn { margin:0 16px 10px; background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; transition:all 0.2s; }
+    .chat-btn { margin:0 16px 4px; background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; transition:all 0.2s; }
     .chat-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-pale); }
+    .pantry-btn { margin:0 16px 10px; background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; transition:all 0.2s; }
+    .pantry-btn:hover, .pantry-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-pale); }
+    .pantry-panel { margin:0 16px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:10px 12px; }
+    .pantry-panel-label { font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+    .pantry-tag { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; font-size:12px; color:var(--text); padding:2px 7px 2px 8px; margin:2px 3px 2px 0; }
+    .pantry-tag button { background:none; border:none; cursor:pointer; color:var(--text-dim); font-size:11px; padding:0; line-height:1; }
+    .pantry-tag button:hover { color:var(--red); }
+    .pantry-add-row { display:flex; gap:6px; margin-top:8px; }
+    .pantry-add-row input { flex:1; background:#fff; border:1px solid var(--border); border-radius:3px; color:var(--text); padding:5px 8px; font-family:'Lora',serif; font-size:13px; outline:none; min-width:0; }
+    .pantry-add-row input:focus { border-color:var(--accent-light); }
+    .pantry-add-row button { background:var(--accent); border:none; color:#faf7f2; border-radius:3px; padding:5px 10px; font-size:13px; cursor:pointer; }
     .search-wrap { padding:10px 16px; border-bottom:1px solid var(--border); }
     .search-wrap input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:3px; color:var(--text); padding:7px 10px; font-family:'Lora',serif; font-size:14px; outline:none; transition:border-color 0.2s; }
     .search-wrap input:focus { border-color:var(--accent-light); background:#fff; }
@@ -267,8 +278,9 @@ let state = {
   successMsg: null, formError: null,
   editingId: null, form: emptyForm(),
   showChat: false, chatMessages: [], chatLoading: false,
-  pendingRecipe: null,
-  notifPanel: false, notifSettings: null, notifPermission: null, fcmToken: null
+  pendingRecipe: null, chatImage: null,
+  notifPanel: false, notifSettings: null, notifPermission: null, fcmToken: null,
+  pantry: [], pantryPanel: false
 };
 
 function emptyForm() {
@@ -343,7 +355,7 @@ async function signIn() {
 onAuthStateChanged(auth, async (user) => {
   if (user && ALLOWED_EMAILS.includes(user.email)) {
     state.user = user;
-    await loadRecipes();
+    await Promise.all([loadRecipes(), loadPantry()]);
     initNotifications(); // intentionally non-blocking
     // Handle deep links from notification clicks
     const params = new URLSearchParams(window.location.search);
@@ -417,6 +429,22 @@ async function saveNotifSettings(enabled, hour) {
   } catch(e) { console.warn('Save notif settings error:', e); }
 }
 
+function renderPantryPanel() {
+  if (!state.pantryPanel) return '';
+  const tags = state.pantry.length
+    ? state.pantry.map(item => `<span class="pantry-tag">${esc(item)}<button class="pantry-rm" data-item="${esc(item)}" title="Remove">✕</button></span>`).join('')
+    : `<div style="font-size:12px;font-style:italic;color:var(--text-dim);">No items yet — add what you have on hand.</div>`;
+  return `<div class="pantry-panel">
+    <div class="pantry-panel-label">🥕 Pantry</div>
+    <div id="pantry-tags">${tags}</div>
+    <div class="pantry-add-row">
+      <input id="pantry-input" type="text" placeholder="Add ingredient…" maxlength="60">
+      <button id="pantry-add-btn">+</button>
+    </div>
+    ${state.pantry.length ? `<button id="pantry-ask-btn" style="width:100%;margin-top:8px;background:var(--accent);border:none;color:#faf7f2;padding:6px 10px;border-radius:3px;font-family:'Playfair Display',serif;font-size:12px;font-style:italic;cursor:pointer;">✦ What can I make with this?</button>` : ''}
+  </div>`;
+}
+
 function renderNotifPanel() {
   if (!state.notifPanel) return '';
   const s = state.notifSettings || { enabled: false, hour: 17 };
@@ -459,6 +487,28 @@ async function loadRecipes() {
       state.recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch(e2) { console.error(e2); }
   }
+}
+
+// ── Pantry ────────────────────────────────────────────────
+async function loadPantry() {
+  try {
+    const snap = await getDoc(doc(db, 'pantry', 'items'));
+    state.pantry = snap.exists() ? (snap.data().items || []) : [];
+  } catch(e) { console.warn('Load pantry error:', e); }
+}
+
+async function addPantryItem(item) {
+  const trimmed = item.trim();
+  if (!trimmed || state.pantry.includes(trimmed)) return;
+  state.pantry = [...state.pantry, trimmed];
+  try { await setDoc(doc(db, 'pantry', 'items'), { items: state.pantry }); }
+  catch(e) { console.warn('Save pantry error:', e); }
+}
+
+async function removePantryItem(item) {
+  state.pantry = state.pantry.filter(i => i !== item);
+  try { await setDoc(doc(db, 'pantry', 'items'), { items: state.pantry }); }
+  catch(e) { console.warn('Save pantry error:', e); }
 }
 
 async function saveRecipe() {
@@ -546,12 +596,23 @@ async function generateChefAlias(recipe) {
 
 
 async function sendChat(message) {
-  state.chatMessages.push({role:"user", content:message});
+  // Build user message content — may include an image
+  const userContent = state.chatImage
+    ? [
+        { type: "image", source: { type: "base64", media_type: state.chatImage.mediaType, data: state.chatImage.base64 } },
+        { type: "text", text: message || "What can you make with this?" }
+      ]
+    : message;
+  state.chatMessages.push({ role: "user", content: userContent, _imagePreview: state.chatImage?.previewUrl });
+  state.chatImage = null;
   state.chatLoading = true;
   state.pendingRecipe = null;
   render();
 
-  const systemPrompt = `You are a friendly cooking assistant for Chris and Lindsay. Help them come up with delicious recipes based on what they have or what they're in the mood for.
+  const pantryLine = state.pantry.length
+    ? `\n\nCurrent pantry: ${state.pantry.join(', ')}.`
+    : '';
+  const systemPrompt = `You are a friendly cooking assistant for Chris and Lindsay. Help them come up with delicious recipes based on what they have or what they're in the mood for.${pantryLine}
 
 When suggesting a recipe, always format it as valid JSON at the end of your message inside a <recipe> tag, like this:
 <recipe>
@@ -583,7 +644,7 @@ Keep the recipe JSON valid. Be warm, conversational, and enthusiastic about food
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
       body: JSON.stringify({
         system: systemPrompt,
-        messages: state.chatMessages.map(m=>({role:m.role, content:m.content}))
+        messages: state.chatMessages.map(m => ({ role: m.role, content: m.content }))
       })
     });
     const data = await res.json();
@@ -724,6 +785,8 @@ function render() {
       ${renderNotifPanel()}
       <button class="add-btn" id="add-btn">+ Add a Recipe</button>
       <button class="chat-btn" id="chat-btn">✦ Ask Claude for Ideas</button>
+      <button class="pantry-btn${state.pantryPanel?' active':''}" id="pantry-btn">🥕 My Pantry${state.pantry.length?` (${state.pantry.length})`:''}</button>
+      ${renderPantryPanel()}
       <div class="search-wrap">
         <input id="search-input" type="text" placeholder="Search..." value="${esc(state.search)}">
       </div>
@@ -887,11 +950,23 @@ function renderChatPanelInner() {
     </div>
     <div class="chat-messages" id="chat-messages">
       ${msgs.length===0?`<div class="chat-msg assistant">Hi! I'm Claude. Tell me what you're in the mood for, what ingredients you have, or ask me to suggest a recipe — I'll come up with something delicious for Chris & Lindsay. 🍽</div>`:''}
-      ${msgs.map(m=>`<div class="chat-msg ${m.role}">${esc(m.content.replace(/<recipe>[\s\S]*?<\/recipe>/g,'').trim())}</div>`).join('')}
+      ${msgs.map(m => {
+        const textContent = Array.isArray(m.content)
+          ? (m.content.find(b => b.type === 'text')?.text || '')
+          : m.content;
+        const displayText = esc(textContent.replace(/<recipe>[\s\S]*?<\/recipe>/g,'').trim());
+        const imgHtml = m._imagePreview
+          ? `<img src="${m._imagePreview}" style="max-width:180px;max-height:140px;border-radius:3px;display:block;margin-bottom:4px;">`
+          : '';
+        return `<div class="chat-msg ${m.role}">${imgHtml}${displayText}</div>`;
+      }).join('')}
       ${state.chatLoading?`<div class="chat-msg assistant thinking">Thinking...</div>`:''}
       ${state.pendingRecipe?`<button class="save-recipe-btn" id="load-recipe-btn">↓ Load "${esc(state.pendingRecipe.title)}" into form</button>`:''}
     </div>
+    ${state.chatImage ? `<div style="padding:6px 14px 0;"><img src="${state.chatImage.previewUrl}" style="height:52px;border-radius:3px;border:1px solid var(--border);"><button id="chat-img-clear" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;vertical-align:top;margin-left:4px;">✕</button></div>` : ''}
     <div class="chat-input-row">
+      <input type="file" id="chat-img-input" accept="image/*" style="display:none">
+      <button class="btn" id="chat-img-btn" title="Attach photo" style="padding:8px 10px;flex-shrink:0;" ${state.chatLoading?'disabled':''}>📷</button>
       <textarea class="chat-input" id="chat-input" placeholder="What are you in the mood for?" rows="1"></textarea>
       <button class="chat-send-btn" id="chat-send" ${state.chatLoading?'disabled':''}>➤</button>
     </div>`;
@@ -915,6 +990,22 @@ function bindEvents() {
   });
   g("add-btn")?.addEventListener("click",()=>{ startAdd(); mobilePanel="form"; });
   g("chat-btn")?.addEventListener("click",()=>{state.showChat=!state.showChat;render();});
+  g("pantry-btn")?.addEventListener("click",()=>{state.pantryPanel=!state.pantryPanel;render();});
+  g("pantry-add-btn")?.addEventListener("click",()=>{
+    const inp=g("pantry-input"); if(!inp) return;
+    addPantryItem(inp.value).then(()=>render());
+    inp.value="";
+  });
+  g("pantry-input")?.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){const inp=g("pantry-input");addPantryItem(inp.value).then(()=>render());inp.value="";}
+  });
+  document.querySelectorAll(".pantry-rm").forEach(btn=>{
+    btn.addEventListener("click",()=>removePantryItem(btn.dataset.item).then(()=>render()));
+  });
+  g("pantry-ask-btn")?.addEventListener("click",()=>{
+    state.showChat=true; mobilePanel="chat"; render();
+    setTimeout(()=>sendChat("What can I make with what's in my pantry?"), 50);
+  });
   g("close-chat")?.addEventListener("click",()=>{state.showChat=false;mobilePanel=state.selected?"detail":"list";render();});
   g("edit-btn")?.addEventListener("click",()=>startEdit(state.selected));
   g("del-btn")?.addEventListener("click",()=>deleteRecipe(state.selected.id));
@@ -948,22 +1039,32 @@ function bindEvents() {
   const chatInput = g("chat-input");
   const chatSend = g("chat-send");
   if(chatInput && chatSend) {
-    chatSend.addEventListener("click",()=>{
-      const msg=chatInput.value.trim();
-      if(!msg||state.chatLoading) return;
-      chatInput.value="";
+    const doSend = () => {
+      const msg = chatInput.value.trim();
+      if ((!msg && !state.chatImage) || state.chatLoading) return;
+      chatInput.value = "";
       sendChat(msg);
-    });
-    chatInput.addEventListener("keydown",e=>{
-      if(e.key==="Enter"&&!e.shiftKey){
-        e.preventDefault();
-        const msg=chatInput.value.trim();
-        if(!msg||state.chatLoading) return;
-        chatInput.value="";
-        sendChat(msg);
-      }
+    };
+    chatSend.addEventListener("click", doSend);
+    chatInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); doSend(); }
     });
   }
+  // Photo attachment
+  g("chat-img-btn")?.addEventListener("click", () => g("chat-img-input")?.click());
+  g("chat-img-clear")?.addEventListener("click", () => { state.chatImage = null; render(); });
+  g("chat-img-input")?.addEventListener("change", e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      const base64 = dataUrl.split(",")[1];
+      state.chatImage = { base64, mediaType: file.type, previewUrl: dataUrl };
+      render();
+    };
+    reader.readAsDataURL(file);
+  });
 
   g("signout-btn")?.addEventListener("click", async () => {
     if (state.user?.uid && state.fcmToken) {
