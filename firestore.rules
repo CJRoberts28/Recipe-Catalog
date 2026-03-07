@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isWhitelisted() {
+      return request.auth != null && request.auth.token.email in [
+        'c.jonesroberts@gmail.com',
+        'lrobertsmlt@gmail.com'
+      ];
+    }
+
+    // Recipe catalog — full access for both users
+    match /recipes/{recipeId} {
+      allow read, write: if isWhitelisted();
+    }
+
+    // Shared notification schedule config
+    match /settings/notifications {
+      allow read, write: if isWhitelisted();
+    }
+
+    // FCM tokens — each user can only manage their own token
+    match /fcm_tokens/{uid} {
+      allow write, delete: if isWhitelisted() && request.auth.uid == uid;
+    }
+  }
+}
