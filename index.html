@@ -537,12 +537,11 @@ When suggesting a recipe, always format it as valid JSON at the end of your mess
 Keep the recipe JSON valid. Be warm, conversational, and enthusiastic about food. If they already have ingredients, use those. If they want something specific, deliver it with flair.`;
 
   try {
+    const idToken = await auth.currentUser.getIdToken();
     const res = await fetch(ANTHROPIC_API, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
         system: systemPrompt,
         messages: state.chatMessages.map(m=>({role:m.role, content:m.content}))
       })
@@ -555,7 +554,10 @@ Keep the recipe JSON valid. Be warm, conversational, and enthusiastic about food
     const match = text.match(/<recipe>([\s\S]*?)<\/recipe>/);
     if (match) {
       try {
-        state.pendingRecipe = JSON.parse(match[1].trim());
+        const parsed = JSON.parse(match[1].trim());
+        if (parsed && typeof parsed.title === "string" && Array.isArray(parsed.components)) {
+          state.pendingRecipe = parsed;
+        }
       } catch(e) { console.error("Recipe parse error", e); }
     }
   } catch(e) {

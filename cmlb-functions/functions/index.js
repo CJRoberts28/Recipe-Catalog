@@ -17,6 +17,9 @@ admin.initializeApp();
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
+const ALLOWED_EMAILS = ["c.jonesroberts@gmail.com", "lrobertsmlt@gmail.com"];
+const PROXY_MODEL = "claude-sonnet-4-20250514";
+const PROXY_MAX_TOKENS = 1000;
 
 // ── claudeProxy ───────────────────────────────────────────────────────────────
 // Receives {model, max_tokens, system, messages} from the frontend and proxies
@@ -28,8 +31,26 @@ exports.claudeProxy = onRequest(
       res.status(405).json({ error: "Method not allowed" });
       return;
     }
+
+    // Verify Firebase ID token
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
     try {
-      const { model, max_tokens, system, messages } = req.body;
+      const decoded = await admin.auth().verifyIdToken(authHeader.split("Bearer ")[1]);
+      if (!ALLOWED_EMAILS.includes(decoded.email)) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    } catch (e) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    try {
+      const { system, messages } = req.body;
       const response = await fetch(ANTHROPIC_URL, {
         method: "POST",
         headers: {
@@ -37,13 +58,19 @@ exports.claudeProxy = onRequest(
           "x-api-key": ANTHROPIC_API_KEY.value(),
           "anthropic-version": ANTHROPIC_VERSION,
         },
-        body: JSON.stringify({ model, max_tokens, system, messages }),
+        body: JSON.stringify({ model: PROXY_MODEL, max_tokens: PROXY_MAX_TOKENS, system, messages }),
       });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Anthropic API error:", response.status, errText);
+        res.status(502).json({ error: "Upstream error" });
+        return;
+      }
       const data = await response.json();
       res.json(data);
     } catch (err) {
       console.error("claudeProxy error:", err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal error" });
     }
   }
 );
@@ -158,6 +185,11 @@ Do not include JSON or recipe tags. Be warm and direct.`;
         messages: [{ role: "user", content: userMessage }],
       }),
     });
+    if (!anthropicRes.ok) {
+      const errText = await anthropicRes.text();
+      console.error("Anthropic API error in sendDinnerSuggestion:", anthropicRes.status, errText);
+      return;
+    }
     const anthropicData = await anthropicRes.json();
     const suggestion = (anthropicData.content?.[0]?.text || "").trim()
       || "How about revisiting one of your favorites tonight?";
