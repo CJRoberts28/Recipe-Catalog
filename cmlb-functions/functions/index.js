@@ -113,12 +113,13 @@ exports.sendDinnerSuggestion = onSchedule(
       return;
     }
 
-    // 2. Check current hour in America/New_York
+    // 2. Check current hour in the user's configured timezone (fallback: Pacific)
+    const timezone = settings.timezone || "America/Los_Angeles";
     const now = new Date();
     const currentHour = parseInt(
-      new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now)
+      new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hourCycle: "h23" }).format(now)
     );
-    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(now); // "YYYY-MM-DD"
+    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now); // "YYYY-MM-DD"
 
     if (currentHour !== settings.hour) {
       console.log(`Hour mismatch: current=${currentHour}, configured=${settings.hour}. Skipping.`);
