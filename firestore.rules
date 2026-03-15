@@ -23,5 +23,10 @@ service cloud.firestore {
     match /fcm_tokens/{uid} {
       allow read, write, delete: if isWhitelisted() && request.auth.uid == uid;
     }
+
+    // Pantry — shared between both users
+    match /pantry/{docId} {
+      allow read, write: if isWhitelisted();
+    }
   }
 }

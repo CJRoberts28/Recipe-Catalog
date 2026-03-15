@@ -344,7 +344,7 @@ async function signIn() {
     const email = result.user.email;
     if (!ALLOWED_EMAILS.includes(email)) {
       await signOut(auth);
-      document.getElementById("login-error").textContent = "Sorry, this app is private. Contact CJ for access.";
+      document.getElementById("login-error").textContent = `Sorry, ${email} doesn't have access. Make sure you're signed into the right Google account.`;
       return;
     }
   } catch(e) {
