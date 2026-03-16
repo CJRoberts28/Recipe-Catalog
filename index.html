@@ -575,10 +575,10 @@ async function generateChefAlias(recipe) {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
       body: JSON.stringify({
-        system: "You are a Michelin-starred chef with a flair for dramatic menu writing. Respond with only the alias — no explanation, no punctuation at the end.",
+        system: "You are a creative chef describing dishes in the style of Chopped or Top Chef contestants — confident, specific, and appetizing. Write in plain English with a few culinary terms where they naturally fit. Never use full French phrases or entire French titles. Respond with only the alias — no explanation, no punctuation at the end.",
         messages: [{
           role: "user",
-          content: `Give "${recipe.title}" a single professional chef alias using elevated culinary language — think gastrique, confit, en papillote, brunoise, amuse-bouche, jus lié, etc. Be creative and specific to the dish. One line only.`
+          content: `Give "${recipe.title}" a single chef-style alias that describes what it actually is — specific ingredients, cooking method, and a finishing touch. Think: "Pan-Seared Chicken Thighs with Roasted Garlic Pan Sauce and Crispy Capers" or "Brown Butter Honey Cake with Whipped Mascarpone and Candied Walnuts". One line only, no French titles.`
         }]
       })
     });
@@ -751,6 +751,23 @@ function renderLogin() {
 
 let mobilePanel = "list"; // list | detail | form | chat
 
+// ── Wake Lock (keep screen on while viewing a recipe) ────────
+let wakeLock = null;
+async function updateWakeLock() {
+  const shouldLock = state.view === 'detail' && !!state.selected;
+  if (shouldLock && !wakeLock && 'wakeLock' in navigator) {
+    try { wakeLock = await navigator.wakeLock.request('screen'); }
+    catch(e) { /* denied or not supported */ }
+  } else if (!shouldLock && wakeLock) {
+    wakeLock.release().catch(()=>{});
+    wakeLock = null;
+  }
+}
+// Re-acquire after tab becomes visible again (browser auto-releases on hide)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') updateWakeLock();
+});
+
 function isMobile() { return window.innerWidth <= 767; }
 
 function render() {
@@ -832,6 +849,7 @@ function render() {
   </div>`;
 
   bindEvents();
+  updateWakeLock();
 
   // Generate chef alias if viewing a recipe that doesn't have one yet
   if (state.selected && state.view === 'detail' && !state.selected.chefAlias) {
@@ -852,6 +870,7 @@ function renderDetail(r) {
       <button class="btn btn-danger" id="del-btn">✕ Delete</button>
       <button class="btn" id="print-btn">⎙ Print</button>
       <button class="btn" id="share-btn">⎘ Share</button>
+      <button class="btn" id="refine-btn">✦ Refine</button>
     </div>
     <div class="recipe-title-wrap">
       <h1 class="recipe-title">${esc(r.title)}</h1>
@@ -1010,6 +1029,16 @@ function bindEvents() {
   g("edit-btn")?.addEventListener("click",()=>startEdit(state.selected));
   g("del-btn")?.addEventListener("click",()=>deleteRecipe(state.selected.id));
   g("print-btn")?.addEventListener("click",()=>window.print());
+  g("refine-btn")?.addEventListener("click",()=>{
+    const r = state.selected; if (!r) return;
+    const comps = Array.isArray(r.components) ? r.components : [];
+    const recipeJson = JSON.stringify({
+      title: r.title, category: r.category, rating: r.rating,
+      cook_time: r.cook_time, tags: r.tags, notes: r.notes, components: comps
+    }, null, 2);
+    state.showChat = true; mobilePanel = "chat"; render();
+    setTimeout(() => sendChat(`Here is our current recipe for "${r.title}". Please review it and suggest improvements — better techniques, ingredient tweaks, timing adjustments, anything you think would elevate it. Then give me the refined version.\n\n\`\`\`json\n${recipeJson}\n\`\`\``), 50);
+  });
   g("share-btn")?.addEventListener("click",()=>{
     const url=`https://cjroberts28.github.io/cmlbRecipes/?recipeId=${state.selected.id}`;
     navigator.clipboard.writeText(url).then(()=>{
