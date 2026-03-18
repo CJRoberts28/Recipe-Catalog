@@ -5,7 +5,8 @@ service cloud.firestore {
     function isWhitelisted() {
       return request.auth != null && request.auth.token.email in [
         'c.jonesroberts@gmail.com',
-        'lrobertsmlt@gmail.com'
+        'lrobertsmlt@gmail.com',
+        'gischris28@gmail.com'
       ];
     }
 
