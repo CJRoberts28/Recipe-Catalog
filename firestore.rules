@@ -3,11 +3,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isWhitelisted() {
-      return request.auth != null && request.auth.token.email in [
-        'c.jonesroberts@gmail.com',
-        'l.robertsmlt@gmail.com',
-        'gischris28@gmail.com'
-      ];
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)) &&
+        get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.active == true;
     }
 
     // Recipe catalog — full access for both users
@@ -28,6 +26,12 @@ service cloud.firestore {
     // Pantry — shared between both users
     match /pantry/{docId} {
       allow read, write: if isWhitelisted();
+    }
+
+    // Access control — managed manually in Firebase Console
+    match /allowedUsers/{email} {
+      allow read: if request.auth != null && request.auth.token.email == email;
+      allow write: if false;
     }
   }
 }

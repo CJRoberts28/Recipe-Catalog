@@ -17,7 +17,6 @@ admin.initializeApp();
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const ALLOWED_EMAILS = ["c.jonesroberts@gmail.com", "l.robertsmlt@gmail.com", "gischris28@gmail.com"];
 const PROXY_MODEL = "claude-sonnet-4-20250514";
 const PROXY_MAX_TOKENS = 1000;
 
@@ -40,7 +39,8 @@ exports.claudeProxy = onRequest(
     }
     try {
       const decoded = await admin.auth().verifyIdToken(authHeader.split("Bearer ")[1]);
-      if (!ALLOWED_EMAILS.includes(decoded.email)) {
+      const userDoc = await admin.firestore().collection("allowedUsers").doc(decoded.email).get();
+      if (!userDoc.exists || !userDoc.data().active) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }

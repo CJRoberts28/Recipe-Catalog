@@ -248,6 +248,7 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, q
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getMessaging, getToken, onMessage }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+import { checkAllowed } from "./src/auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtszGE-y56VKC0vtXUdRY12Iujuh_lJN8",
@@ -258,7 +259,6 @@ const firebaseConfig = {
   appId: "1:646061210319:web:5208edb8a47a8c959d15ba"
 };
 
-const ALLOWED_EMAILS = ["c.jonesroberts@gmail.com", "l.robertsmlt@gmail.com", "gischris28@gmail.com"];
 const ANTHROPIC_API = "https://us-central1-cmlb-recipes.cloudfunctions.net/claudeProxy";
 // SETUP REQUIRED: Replace with your VAPID key from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
 const VAPID_KEY = "BP9UgNCtE29Yg3CLr9hqgIGA8k7y4kR0l5sRIJrckaXxyQMETS7QfAB_-etP6ee987Og2J-I2A7XJd2DrEMLAtg";
@@ -342,7 +342,7 @@ async function signIn() {
   try {
     const result = await signInWithPopup(auth, provider);
     const email = result.user.email;
-    if (!ALLOWED_EMAILS.includes(email)) {
+    if (!await checkAllowed(email, db)) {
       await signOut(auth);
       document.getElementById("login-error").textContent = `Sorry, ${email} doesn't have access. Make sure you're signed into the right Google account.`;
       return;
@@ -353,7 +353,7 @@ async function signIn() {
 }
 
 onAuthStateChanged(auth, async (user) => {
-  if (user && ALLOWED_EMAILS.includes(user.email)) {
+  if (user && await checkAllowed(user.email, db)) {
     state.user = user;
     await Promise.all([loadRecipes(), loadPantry()]);
     initNotifications(); // intentionally non-blocking
