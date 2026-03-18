@@ -80,7 +80,7 @@ firebase deploy --only functions
 ### Auth
 Google OAuth only. Whitelisted emails:
 - c.jonesroberts@gmail.com (Chris)
-- lrobertsmlt@gmail.com (Lindsay)
+- l.robertsmlt@gmail.com (Lindsay)
 
 Firestore security rules restrict read/write to these two emails only.
 
