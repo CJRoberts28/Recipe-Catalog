@@ -7,7 +7,7 @@ Chris & Lindsay's private recipe catalog with Google Auth, Firestore storage, an
 
 ## Stack
 - **Frontend**: Static HTML/JS on GitHub Pages
-- **Auth**: Firebase Google Authentication (whitelist: c.jonesroberts@gmail.com, lrobertsmlt@gmail.com)
+- **Auth**: Firebase Google Authentication (whitelist: c.jonesroberts@gmail.com, l.robertsmlt@gmail.com)
 - **Database**: Firebase Firestore
 - **AI**: Claude via Anthropic API (called directly from browser)
 - **Backend**: None — Render is no longer needed
@@ -29,7 +29,7 @@ service cloud.firestore {
       allow read, write: if request.auth != null &&
         request.auth.token.email in [
           'c.jonesroberts@gmail.com',
-          'lrobertsmlt@gmail.com'
+          'l.robertsmlt@gmail.com'
         ];
     }
   }

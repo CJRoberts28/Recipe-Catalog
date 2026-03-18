@@ -17,7 +17,7 @@ admin.initializeApp();
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const ALLOWED_EMAILS = ["c.jonesroberts@gmail.com", "lrobertsmlt@gmail.com", "gischris28@gmail.com"];
+const ALLOWED_EMAILS = ["c.jonesroberts@gmail.com", "l.robertsmlt@gmail.com", "gischris28@gmail.com"];
 const PROXY_MODEL = "claude-sonnet-4-20250514";
 const PROXY_MAX_TOKENS = 1000;
 
