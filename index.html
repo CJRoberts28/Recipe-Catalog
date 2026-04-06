@@ -272,8 +272,10 @@ const provider = new GoogleAuthProvider();
 let swRegistration = null;
 let notifMessageUnsubscribe = null;
 
-// Cross-app SSO: if cmlb-apps passed a custom token, sign in with it silently
-(async () => {
+// Cross-app SSO: if cmlb-apps passed a custom token, sign in with it silently.
+// We store the promise so onAuthStateChanged can wait for it — otherwise the
+// listener fires immediately with null and shows the login screen mid-flight.
+const ctSignInReady = (async () => {
   const params = new URLSearchParams(window.location.search);
   const ct = params.get('ct');
   if (ct) {
@@ -364,7 +366,7 @@ async function signIn() {
   }
 }
 
-onAuthStateChanged(auth, async (user) => {
+ctSignInReady.then(() => onAuthStateChanged(auth, async (user) => {
   if (user && await checkAllowed(user.email, db)) {
     state.user = user;
     await Promise.all([loadRecipes(), loadPantry()]);
@@ -389,7 +391,7 @@ onAuthStateChanged(auth, async (user) => {
     if (notifMessageUnsubscribe) { notifMessageUnsubscribe(); notifMessageUnsubscribe = null; }
     renderLogin();
   }
-});
+}));
 
 // ── Notifications ─────────────────────────────────────────
 async function initNotifications() {
