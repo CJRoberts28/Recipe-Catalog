@@ -1040,7 +1040,7 @@ function bindEvents() {
     setTimeout(() => sendChat(`Here is our current recipe for "${r.title}". Please review it and suggest improvements — better techniques, ingredient tweaks, timing adjustments, anything you think would elevate it. Then give me the refined version.\n\n\`\`\`json\n${recipeJson}\n\`\`\``), 50);
   });
   g("share-btn")?.addEventListener("click",()=>{
-    const url=`https://cjroberts28.github.io/cmlbRecipes/?recipeId=${state.selected.id}`;
+    const url=`https://cmlb-recipes.web.app/?recipeId=${state.selected.id}`;
     navigator.clipboard.writeText(url).then(()=>{
       state.successMsg="Link copied to clipboard!";render();
       setTimeout(()=>{state.successMsg=null;render();},3000);
