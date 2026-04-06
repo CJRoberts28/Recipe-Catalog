@@ -386,7 +386,7 @@ async function initNotifications() {
   try {
     const snap = await getDoc(doc(db, 'settings', 'notifications'));
     state.notifSettings = snap.exists() ? snap.data() : { enabled: false, hour: 17, lastSent: '' };
-    swRegistration = await navigator.serviceWorker.register('/cmlbRecipes/firebase-messaging-sw.js');
+    swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
     if (Notification.permission === 'granted') await refreshFCMToken();
     if (notifMessageUnsubscribe) notifMessageUnsubscribe();
     notifMessageUnsubscribe = onMessage(messaging, payload => {

@@ -26,8 +26,7 @@
       "CLAUDE.md",
       "firestore.rules",
       "cmlb-functions/**",
-      ".github/**",
-      "src/**"
+      ".github/**"
     ],
     "rewrites": [
       { "source": "**", "destination": "/index.html" }
