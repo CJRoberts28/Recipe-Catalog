@@ -6,8 +6,9 @@
 // Functions:
 //   claudeProxy              — HTTP proxy to Anthropic API (used by chat UI)
 //   sendDinnerSuggestion     — Hourly scheduled function; sends daily push notification with a Claude-generated dinner idea
+//   getCustomToken           — Callable: exchanges a verified session for a custom token (used for cross-app SSO)
 
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
@@ -261,3 +262,15 @@ Do not include JSON or recipe tags. Be warm and direct.`;
     console.log(`Done. Dinner suggestion sent for ${todayStr}.`);
   }
 );
+
+// ── getCustomToken ────────────────────────────────────────────────────────────
+// Callable function used for cross-app SSO. A signed-in user on cmlb-apps
+// calls this to get a short-lived custom token, which is then passed to
+// cmlb-recipes via URL param so the user doesn't need to sign in twice.
+exports.getCustomToken = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("unauthenticated");
+  }
+  const customToken = await admin.auth().createCustomToken(request.auth.uid);
+  return { customToken };
+});

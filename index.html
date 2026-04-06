@@ -242,7 +242,7 @@
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -271,6 +271,18 @@ const messaging = getMessaging(app);
 const provider = new GoogleAuthProvider();
 let swRegistration = null;
 let notifMessageUnsubscribe = null;
+
+// Cross-app SSO: if cmlb-apps passed a custom token, sign in with it silently
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const ct = params.get('ct');
+  if (ct) {
+    try { await signInWithCustomToken(auth, ct); } catch (e) { console.warn('Custom token sign-in failed', e); }
+    params.delete('ct');
+    const newUrl = [window.location.pathname, params.toString() ? '?' + params.toString() : ''].join('');
+    history.replaceState(null, '', newUrl);
+  }
+})();
 
 let state = {
   user: null, recipes: [], selected: null,
