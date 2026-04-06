@@ -201,7 +201,7 @@ Do not include JSON or recipe tags. Be warm and direct.`;
     const mentionedRecipe = recipes.find(r =>
       suggestion.toLowerCase().includes(r.title.toLowerCase())
     );
-    const baseUrl = "https://cjroberts28.github.io/cmlbRecipes/";
+    const baseUrl = "https://cmlb-recipes.web.app/";
     const deepLink = mentionedRecipe
       ? `${baseUrl}?recipeId=${mentionedRecipe.id}`
       : `${baseUrl}?chat=1`;
@@ -219,8 +219,8 @@ Do not include JSON or recipe tags. Be warm and direct.`;
       data: notifData,
       webpush: {
         notification: {
-          icon: "https://cjroberts28.github.io/cmlbRecipes/favicon.svg",
-          badge: "https://cjroberts28.github.io/cmlbRecipes/favicon.svg",
+          icon: "https://cmlb-recipes.web.app/favicon.svg",
+          badge: "https://cmlb-recipes.web.app/favicon.svg",
           requireInteraction: false,
         },
         fcmOptions: {

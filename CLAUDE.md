@@ -8,17 +8,17 @@ This file provides context for Claude Code and VS Code Claude extension sessions
 
 A private recipe catalog web app for Chris and Lindsay. They use it to save, browse, and discover recipes. Claude is integrated directly into the app as a recipe suggestion assistant.
 
-**Live site:** https://cjroberts28.github.io/cmlbRecipes
+**Live site:** https://cmlb-recipes.web.app
 **GitHub repo:** https://github.com/CJRoberts28/cmlbRecipes
 
 ---
 
 ## Architecture
 
-This is a fully static single-page app hosted on GitHub Pages. There is no traditional backend.
+This is a fully static single-page app hosted on Firebase Hosting. There is no traditional backend.
 
 ```
-GitHub Pages (static)
+Firebase Hosting (static)
 ├── index.html        — entire frontend SPA (HTML + CSS + JS in one file)
 ├── favicon.svg       — custom C&L monogram icon
 ├── firebase.json     — Firebase project config (deploy from repo root)
@@ -27,6 +27,7 @@ GitHub Pages (static)
 └── README.md         — user-facing documentation
 
 Firebase (external services)
+├── Hosting           — static frontend at cmlb-recipes.web.app
 ├── Authentication    — Google OAuth, whitelisted to two emails
 ├── Firestore         — recipe storage (NoSQL)
 └── Cloud Functions   — single function: claudeProxy (Anthropic API proxy)
