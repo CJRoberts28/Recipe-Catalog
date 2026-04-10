@@ -119,6 +119,23 @@
     .step-item { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--surface2); font-size:15px; color:var(--text-muted); line-height:1.65; }
     .step-item strong { color:var(--accent); font-weight:600; }
     .step-num { color:var(--accent); font-family:'Playfair Display',serif; font-size:15px; flex-shrink:0; width:18px; font-style:italic; }
+    .timer-btn { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid var(--border); border-radius:3px; background:var(--surface2); color:var(--accent); cursor:pointer; font-size:10px; padding:0; margin-left:3px; vertical-align:middle; line-height:1; }
+    .timer-btn:hover { background:var(--accent-pale); border-color:var(--accent-light); }
+    #timer-overlay { position:fixed; bottom:80px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+    .timer-chip { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--surface); border:1px solid var(--border); border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,.12); font-size:13px; color:var(--text); pointer-events:all; min-width:190px; }
+    .timer-chip.timer-done { border-color:var(--green); background:#f0faf5; }
+    .timer-label { flex:1; font-size:11px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px; }
+    .timer-display { font-variant-numeric:tabular-nums; font-weight:600; font-size:16px; color:var(--text); min-width:52px; text-align:center; }
+    .timer-display--done { color:var(--green); }
+    .timer-toggle, .timer-dismiss { background:none; border:1px solid var(--border); border-radius:3px; cursor:pointer; padding:2px 6px; font-size:11px; color:var(--text-muted); }
+    .timer-toggle:hover, .timer-dismiss:hover { background:var(--accent-pale); }
+    .servings-scaler { display:flex; align-items:center; gap:8px; margin:8px 0 12px; font-size:13px; color:var(--text-muted); }
+    .servings-label { font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+    .servings-btn { background:none; border:1px solid var(--border); border-radius:3px; color:var(--accent); width:22px; height:22px; font-size:15px; cursor:pointer; line-height:1; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .servings-btn:hover:not(:disabled) { background:var(--accent-pale); }
+    .servings-btn:disabled { opacity:.4; cursor:default; }
+    .servings-count { font-weight:600; font-size:15px; color:var(--text); min-width:20px; text-align:center; }
+    .servings-scale-note { font-size:11px; color:var(--accent-light); font-style:italic; }
     .action-row { display:flex; gap:8px; margin-bottom:22px; }
     .btn { padding:7px 16px; border-radius:3px; font-family:'Lora',serif; font-size:14px; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); transition:all 0.2s; }
     .btn:hover { border-color:var(--accent-light); color:var(--accent); background:var(--accent-pale); }
@@ -294,17 +311,121 @@ let state = {
   showChat: false, chatMessages: [], chatLoading: false,
   pendingRecipe: null, chatImage: null,
   notifPanel: false, notifSettings: null, notifPermission: null, fcmToken: null,
-  pantry: [], pantryPanel: false
+  pantry: [], pantryPanel: false,
+  timers: [],
+  scaledServings: null
 };
+let timerIdCounter = 0;
 
 function emptyForm() {
-  return { title:"", category:"Dinner", rating:5, favorite:false, cook_time:"",
+  return { title:"", category:"Dinner", rating:5, favorite:false, cook_time:"", servings:"",
     tags:"", date:todayStr(), notes:"",
     components:[{name:"", ingredients:[""], steps:[""]}] };
 }
 function todayStr() { return new Date().toISOString().split("T")[0]; }
 function stars(n) { return "★".repeat(n||0)+"☆".repeat(5-(n||0)); }
 function esc(s) { return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Serving Scaler ─────────────────────────────────────────────────────────────
+function parseLeadingNumber(str) {
+  const m = str.match(/^(\d+)\s+(\d+)\/(\d+)\b|^(\d+)\/(\d+)\b|^(\d+(?:\.\d+)?)\b/);
+  if (!m) return null;
+  if (m[1] !== undefined) return { value: parseInt(m[1]) + parseInt(m[2])/parseInt(m[3]), end: m[0].length };
+  if (m[4] !== undefined) return { value: parseInt(m[4])/parseInt(m[5]), end: m[0].length };
+  if (m[6] !== undefined) return { value: parseFloat(m[6]), end: m[0].length };
+  return null;
+}
+function formatFraction(n) {
+  if (n <= 0) return '0';
+  const whole = Math.floor(n), frac = n - whole;
+  if (frac < 0.04) return String(whole || '');
+  const fracs = [[1,8,'⅛'],[1,4,'¼'],[1,3,'⅓'],[3,8,'⅜'],[1,2,'½'],[5,8,'⅝'],[2,3,'⅔'],[3,4,'¾'],[7,8,'⅞']];
+  for (const [num, den, sym] of fracs) {
+    if (Math.abs(frac - num/den) < 0.07) return (whole > 0 ? `${whole} ` : '') + sym;
+  }
+  const dec = n.toFixed(1).replace(/\.0$/, '');
+  return dec;
+}
+function scaleIngredient(ing, factor) {
+  if (!ing || factor === 1) return ing;
+  const trimmed = ing.trimStart();
+  const p = parseLeadingNumber(trimmed);
+  if (!p || p.value === 0) return ing;
+  const prefix = ing.slice(0, ing.length - trimmed.length);
+  return prefix + formatFraction(p.value * factor) + trimmed.slice(p.end);
+}
+
+// ── Inline Timers ──────────────────────────────────────────────────────────────
+function secondsFromTime(num, unit) {
+  if (/hours?|hrs?/i.test(unit)) return Math.round(num * 3600);
+  if (/minutes?|mins?/i.test(unit)) return Math.round(num * 60);
+  return Math.round(num);
+}
+function formatTimerDisplay(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+function renderTimerOverlay() {
+  let el = document.getElementById('timer-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'timer-overlay';
+    document.body.appendChild(el);
+  }
+  if (state.timers.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = state.timers.map(t => `
+    <div class="timer-chip${t.remaining <= 0 ? ' timer-done' : ''}">
+      <span class="timer-label">${esc(t.label)}</span>
+      <span class="timer-display${t.remaining <= 0 ? ' timer-display--done' : ''}">${formatTimerDisplay(t.remaining)}</span>
+      <button class="timer-toggle" data-tid="${t.id}">${t.remaining <= 0 ? '✓' : (t.running ? '⏸' : '▶')}</button>
+      <button class="timer-dismiss" data-tid="${t.id}">✕</button>
+    </div>`).join('');
+  el.querySelectorAll('.timer-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = state.timers.find(t => t.id === +btn.dataset.tid);
+      if (!t) return;
+      if (t.remaining <= 0) { dismissTimer(+btn.dataset.tid); return; }
+      toggleTimer(+btn.dataset.tid);
+    });
+  });
+  el.querySelectorAll('.timer-dismiss').forEach(btn =>
+    btn.addEventListener('click', () => dismissTimer(+btn.dataset.tid))
+  );
+}
+function startTimer(seconds, label) {
+  const id = ++timerIdCounter;
+  const timer = { id, label, seconds, remaining: seconds, running: true, intervalId: null };
+  timer.intervalId = setInterval(() => {
+    const t = state.timers.find(t => t.id === id);
+    if (!t) return;
+    if (t.remaining > 0) t.remaining--;
+    if (t.remaining <= 0) { t.running = false; clearInterval(t.intervalId); }
+    renderTimerOverlay();
+  }, 1000);
+  state.timers.push(timer);
+  renderTimerOverlay();
+}
+function toggleTimer(id) {
+  const t = state.timers.find(t => t.id === id);
+  if (!t) return;
+  if (t.running) {
+    clearInterval(t.intervalId); t.running = false;
+  } else {
+    t.running = true;
+    t.intervalId = setInterval(() => {
+      if (t.remaining > 0) t.remaining--;
+      if (t.remaining <= 0) { t.running = false; clearInterval(t.intervalId); }
+      renderTimerOverlay();
+    }, 1000);
+  }
+  renderTimerOverlay();
+}
+function dismissTimer(id) {
+  const idx = state.timers.findIndex(t => t.id === id);
+  if (idx >= 0) { clearInterval(state.timers[idx].intervalId); state.timers.splice(idx, 1); }
+  renderTimerOverlay();
+}
 
 function formatStep(s, ingredients) {
   if (!s) return '';
@@ -343,10 +464,21 @@ function formatStep(s, ingredients) {
   let out = esc(text);
   // Render **amount** markers as bold
   out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Bold any remaining standalone quantities + temps not already wrapped
+  // Bold measurement/temperature quantities not already wrapped
   out = out.replace(
-    /(?<!<strong>)(\d+(?:[\/\.]\d+)?(?:\s*[-–]\s*\d+(?:[\/\.]\d+)?)?)\s*(°F|°C|cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|lbs?|pounds?|grams?|g\b|kg|ml|liters?|quarts?|pints?|minutes?|mins?|hours?|hrs?|seconds?)(?!<\/strong>)/gi,
+    /(?<!<strong>)(\d+(?:[\/\.]\d+)?(?:\s*[-–]\s*\d+(?:[\/\.]\d+)?)?)\s*(°F|°C|cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|lbs?|pounds?|grams?|g\b|kg|ml|liters?|quarts?|pints?)(?!<\/strong>)/gi,
     '<strong>$1 $2</strong>'
+  );
+  // Bold time durations and inject a timer button after each
+  out = out.replace(
+    /(?<!<strong>)(\d+(?:[\/\.]\d+)?(?:\s*[-–]\s*\d+(?:[\/\.]\d+)?)?)\s*(minutes?|mins?|hours?|hrs?|seconds?)(?!<\/strong>)/gi,
+    (match, num, unit) => {
+      const parts = num.split(/[-–]/);
+      const maxNum = Math.max(...parts.map(p => parseFloat(p.trim()) || 0));
+      const secs = secondsFromTime(maxNum, unit);
+      const label = match.trim();
+      return `<strong>${num.trim()} ${unit}</strong><button class="timer-btn" data-seconds="${secs}" data-label="${label}" title="Start ${label} timer">⏱</button>`;
+    }
   );
   return out;
 }
@@ -366,7 +498,9 @@ async function signIn() {
   }
 }
 
-ctSignInReady.then(() => onAuthStateChanged(auth, async (user) => {
+handleShareLink().then(handled => {
+  if (handled) return;
+  ctSignInReady.then(() => onAuthStateChanged(auth, async (user) => {
   if (user && await checkAllowed(user.email, db)) {
     state.user = user;
     await Promise.all([loadRecipes(), loadPantry()]);
@@ -377,10 +511,14 @@ ctSignInReady.then(() => onAuthStateChanged(auth, async (user) => {
     const notifChat = params.get('chat');
     if (notifRecipeId) {
       const r = state.recipes.find(r => r.id === notifRecipeId);
-      if (r) { state.selected = r; state.view = 'detail'; mobilePanel = 'detail'; }
+      if (r) { state.selected = r; state.view = 'detail'; mobilePanel = 'detail'; history.replaceState({ view: 'detail', recipeId: r.id }, ''); }
+      else { history.replaceState({ view: 'list' }, ''); }
     } else if (notifChat) {
       state.showChat = true;
       mobilePanel = 'chat';
+      history.replaceState({ view: 'list' }, '');
+    } else {
+      history.replaceState({ view: 'list' }, '');
     }
     render();
   } else {
@@ -392,6 +530,7 @@ ctSignInReady.then(() => onAuthStateChanged(auth, async (user) => {
     renderLogin();
   }
 }));
+}); // end handleShareLink().then
 
 // ── Notifications ─────────────────────────────────────────
 async function initNotifications() {
@@ -525,12 +664,60 @@ async function removePantryItem(item) {
   catch(e) { console.warn('Save pantry error:', e); }
 }
 
+// ── Public Sharing ────────────────────────────────────────────────────────────
+async function createShareLink(r) {
+  const token = crypto.randomUUID();
+  await setDoc(doc(db, 'sharedLinks', token), {
+    recipeId: r.id || null, title: r.title, createdAt: new Date().toISOString(),
+    createdBy: state.user.email,
+    recipe: {
+      title: r.title, category: r.category, rating: r.rating, favorite: r.favorite,
+      cook_time: r.cook_time || null, servings: r.servings || null,
+      tags: r.tags || [], date: r.date, notes: r.notes,
+      components: r.components || [], chefAlias: r.chefAlias || null
+    }
+  });
+  return token;
+}
+
+function renderPublicRecipe(r) {
+  document.getElementById('root').innerHTML = `
+  <div style="max-width:760px;margin:0 auto;padding:36px 20px;">
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+      <div style="font-family:'Playfair Display',serif;font-size:13px;font-style:italic;color:var(--accent-light);">CMLB Recipe Catalog — Shared Recipe</div>
+    </div>
+    ${renderDetail(r, {readOnly:true})}
+    <div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--text-muted);font-style:italic;">
+      Shared from <a href="https://cmlb-recipes.web.app/" style="color:var(--accent);">CMLB Recipes</a>
+    </div>
+  </div>`;
+}
+
+async function handleShareLink() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('share');
+  if (!token) return false;
+  document.getElementById('root').innerHTML = '<div class="loading-screen">Loading shared recipe…</div>';
+  try {
+    const snap = await getDoc(doc(db, 'sharedLinks', token));
+    if (!snap.exists()) {
+      document.getElementById('root').innerHTML = '<div class="loading-screen">This share link is invalid or has expired.</div>';
+    } else {
+      renderPublicRecipe(snap.data().recipe);
+    }
+  } catch(e) {
+    document.getElementById('root').innerHTML = `<div class="loading-screen">Could not load recipe: ${esc(e.message)}</div>`;
+  }
+  return true;
+}
+
 async function saveRecipe() {
   syncForm();
   const f = state.form;
   const payload = {
     title: f.title, category: f.category, rating: parseInt(f.rating)||5,
     favorite: f.favorite, cook_time: f.cook_time ? parseInt(f.cook_time) : null,
+    servings: f.servings ? parseInt(f.servings) : null,
     tags: f.tags ? f.tags.split(",").map(t=>t.trim()).filter(Boolean) : [],
     date: f.date, notes: f.notes,
     components: f.components.map(c=>({
@@ -695,6 +882,7 @@ function loadRecipeFromChat() {
     rating: state.pendingRecipe.rating || 5,
     favorite: state.pendingRecipe.favorite || false,
     cook_time: state.pendingRecipe.cook_time || "",
+    servings: state.pendingRecipe.servings || "",
     tags: (state.pendingRecipe.tags||[]).join(", "),
     date: state.pendingRecipe.date || todayStr(),
     notes: state.pendingRecipe.notes || "",
@@ -720,7 +908,7 @@ function startAdd() {
 function startEdit(r) {
   state.form={
     title:r.title||"", category:r.category||"Dinner", rating:r.rating||5,
-    favorite:r.favorite||false, cook_time:r.cook_time||"",
+    favorite:r.favorite||false, cook_time:r.cook_time||"", servings:r.servings||"",
     tags:(r.tags||[]).join(", "), date:r.date||todayStr(), notes:r.notes||"",
     components:(r.components||[]).map(c=>({
       name:c.name||"",
@@ -735,6 +923,7 @@ function syncForm() {
   if(g("f-title")) f.title=g("f-title").value;
   if(g("f-cat")) f.category=g("f-cat").value;
   if(g("f-cooktime")) f.cook_time=g("f-cooktime").value;
+  if(g("f-servings")) f.servings=g("f-servings").value;
   if(g("f-date")) f.date=g("f-date").value;
   if(g("f-tags")) f.tags=g("f-tags").value;
   if(g("f-notes")) f.notes=g("f-notes").value;
@@ -780,6 +969,21 @@ async function updateWakeLock() {
 // Re-acquire after tab becomes visible again (browser auto-releases on hide)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') updateWakeLock();
+});
+
+// Browser back/forward: restore in-app state from history
+window.addEventListener('popstate', e => {
+  if (!state.user) return;
+  const s = e.state;
+  if (!s || s.view === 'list') {
+    state.view = 'list'; state.selected = null; mobilePanel = 'list';
+  } else if (s.view === 'detail' && s.recipeId) {
+    const r = state.recipes.find(r => r.id === s.recipeId);
+    if (r) { state.view = 'detail'; state.selected = r; mobilePanel = 'detail'; }
+    else { state.view = 'list'; state.selected = null; mobilePanel = 'list'; }
+  }
+  state.successMsg = null;
+  render();
 });
 
 function isMobile() { return window.innerWidth <= 767; }
@@ -875,17 +1079,20 @@ function render() {
   if(cm) cm.scrollTop = cm.scrollHeight;
 }
 
-function renderDetail(r) {
+function renderDetail(r, {readOnly=false}={}) {
   const comps=Array.isArray(r.components)?r.components:(typeof r.components==='string'?JSON.parse(r.components):[]);
+  const baseServings = r.servings ? parseInt(r.servings) : null;
+  const curServings = state.scaledServings || baseServings;
+  const scaleFactor = (baseServings && curServings) ? curServings / baseServings : 1;
   return `<div class="fade-in">
-    <button class="back-btn" id="back-btn">Back to Recipes</button>
-    <div class="action-row">
+    ${!readOnly ? `<button class="back-btn" id="back-btn">Back to Recipes</button>` : ''}
+    ${!readOnly ? `<div class="action-row">
       <button class="btn" id="edit-btn">✎ Edit</button>
       <button class="btn btn-danger" id="del-btn">✕ Delete</button>
       <button class="btn" id="print-btn">⎙ Print</button>
       <button class="btn" id="share-btn">⎘ Share</button>
       <button class="btn" id="refine-btn">✦ Refine</button>
-    </div>
+    </div>` : ''}
     <div class="recipe-title-wrap">
       <h1 class="recipe-title">${esc(r.title)}</h1>
       ${r.chefAlias
@@ -901,6 +1108,13 @@ function renderDetail(r) {
       ${(r.tags||[]).map(t=>`<span class="meta-pill">${esc(t)}</span>`).join('')}
       ${r.date?`<span class="meta-pill" style="margin-left:auto;">${r.date}</span>`:''}
     </div>
+    ${baseServings ? `<div class="servings-scaler">
+      <span class="servings-label">Servings</span>
+      ${!readOnly ? `<button class="servings-btn" id="servings-dec" ${curServings<=1?'disabled':''}>−</button>` : ''}
+      <span class="servings-count">${curServings}</span>
+      ${!readOnly ? `<button class="servings-btn" id="servings-inc">+</button>` : ''}
+      ${!readOnly && scaleFactor !== 1 ? `<span class="servings-scale-note">(${scaleFactor > 1 ? '+' : ''}${Math.round((scaleFactor-1)*100)}% from base ${baseServings})</span>` : ''}
+    </div>` : ''}
     ${r.notes?`<div class="notes-block">${esc(r.notes)}</div>`:''}
     ${comps.map(c=>`
       <div class="component">
@@ -908,7 +1122,7 @@ function renderDetail(r) {
         <div class="component-grid">
           <div>
             <div class="col-label">Ingredients</div>
-            ${(c.ingredients||[]).map(i=>`<div class="ingredient-item">${esc(i)}</div>`).join('')}
+            ${(c.ingredients||[]).map(i=>`<div class="ingredient-item">${esc(scaleIngredient(i, scaleFactor))}</div>`).join('')}
           </div>
           <div>
             <div class="col-label">Method</div>
@@ -931,6 +1145,8 @@ function renderForm() {
         <select id="f-cat" class="form-control">${CATS.map(c=>`<option${f.category===c?' selected':''}>${c}</option>`).join('')}</select></div>
       <div class="form-group"><label>Cook Time (minutes)</label>
         <input id="f-cooktime" class="form-control" type="number" value="${esc(String(f.cook_time))}" placeholder="35"></div>
+      <div class="form-group"><label>Servings</label>
+        <input id="f-servings" class="form-control" type="number" min="1" value="${esc(String(f.servings||''))}" placeholder="4"></div>
     </div>
     <div class="form-grid">
       <div class="form-group"><label>Rating</label>
@@ -1009,9 +1225,7 @@ function bindEvents() {
   const on=(sel,ev,fn)=>document.querySelectorAll(sel).forEach(el=>el.addEventListener(ev,fn));
   const g=id=>document.getElementById(id);
 
-  g("back-btn")?.addEventListener("click",()=>{
-    state.view="list"; state.selected=null; mobilePanel="list"; render();
-  });
+  g("back-btn")?.addEventListener("click",()=>{ history.back(); });
   g("nav-list")?.addEventListener("click",()=>{ mobilePanel="list"; state.view="list"; state.showChat=false; render(); });
   g("nav-detail")?.addEventListener("click",()=>{ if(state.selected||state.view==='form'){ mobilePanel=state.view==='form'?'form':'detail'; state.showChat=false; render(); } });
   g("nav-chat")?.addEventListener("click",()=>{ mobilePanel="chat"; state.showChat=true; render(); });
@@ -1019,7 +1233,7 @@ function bindEvents() {
   on(".filter-btn","click",e=>{state.category=e.currentTarget.dataset.cat;render();});
   on(".recipe-item","click",e=>{
     const r=state.recipes.find(r=>r.id===e.currentTarget.dataset.id);
-    if(r){state.selected=r;state.view="detail";state.successMsg=null;mobilePanel="detail";render();}
+    if(r){state.selected=r;state.view="detail";state.successMsg=null;state.scaledServings=null;mobilePanel="detail";history.pushState({view:"detail",recipeId:r.id},'');render();}
   });
   g("add-btn")?.addEventListener("click",()=>{ startAdd(); mobilePanel="form"; });
   g("chat-btn")?.addEventListener("click",()=>{state.showChat=!state.showChat;render();});
@@ -1053,12 +1267,20 @@ function bindEvents() {
     state.showChat = true; mobilePanel = "chat"; render();
     setTimeout(() => sendChat(`Here is our current recipe for "${r.title}". Please review it and suggest improvements — better techniques, ingredient tweaks, timing adjustments, anything you think would elevate it. Then give me the refined version.\n\n\`\`\`json\n${recipeJson}\n\`\`\``), 50);
   });
-  g("share-btn")?.addEventListener("click",()=>{
-    const url=`https://cmlb-recipes.web.app/?recipeId=${state.selected.id}`;
-    navigator.clipboard.writeText(url).then(()=>{
-      state.successMsg="Link copied to clipboard!";render();
-      setTimeout(()=>{state.successMsg=null;render();},3000);
-    });
+  g("share-btn")?.addEventListener("click", async () => {
+    const r = state.selected; if (!r) return;
+    const btn = g("share-btn");
+    btn.disabled = true; btn.textContent = '⏳…';
+    try {
+      const token = await createShareLink(r);
+      const url = `https://cmlb-recipes.web.app/?share=${token}`;
+      await navigator.clipboard.writeText(url);
+      state.successMsg = "Public share link copied!";
+    } catch(e) {
+      state.successMsg = "Share failed. Try again.";
+    }
+    render();
+    setTimeout(() => { state.successMsg = null; render(); }, 4000);
   });
   on(".star","click",e=>{
     state.form.rating=+e.currentTarget.dataset.n;
@@ -1114,6 +1336,21 @@ function bindEvents() {
       try { await deleteDoc(doc(db, 'fcm_tokens', state.user.uid)); } catch(e) {}
     }
     signOut(auth);
+  });
+
+  on(".timer-btn", "click", e => {
+    const secs = parseInt(e.currentTarget.dataset.seconds);
+    const label = e.currentTarget.dataset.label;
+    if (secs > 0) startTimer(secs, label);
+  });
+  g("servings-inc")?.addEventListener("click", () => {
+    const base = state.selected?.servings; if (!base) return;
+    state.scaledServings = (state.scaledServings ?? base) + 1; render();
+  });
+  g("servings-dec")?.addEventListener("click", () => {
+    const base = state.selected?.servings; if (!base) return;
+    const cur = state.scaledServings ?? base;
+    if (cur > 1) { state.scaledServings = cur - 1; render(); }
   });
 
   g("notif-bell-btn")?.addEventListener("click", () => {
