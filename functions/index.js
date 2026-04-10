@@ -1,7 +1,7 @@
-// cmlb-functions/functions/index.js
-// Firebase Cloud Functions for CMLB Recipe Catalog
+// functions/index.js
+// Firebase Cloud Functions for Recipe Catalog
 //
-// Deploy: cd cmlb-functions && firebase deploy --only functions
+// Deploy: firebase deploy --only functions
 //
 // Functions:
 //   claudeProxy              — HTTP proxy to Anthropic API (used by chat UI)
@@ -165,12 +165,12 @@ exports.sendDinnerSuggestion = onSchedule(
 
     const allTitles = recipes.map(r => r.title).join(", ") || "(none)";
 
-    const systemPrompt = `You are a dinner suggestion assistant for Chris and Lindsay's private recipe catalog.
-Suggest one specific dinner for tonight. Either revisit a recipe they love or propose something new that fits their taste.
+    const systemPrompt = `You are a dinner suggestion assistant for a private recipe catalog.
+Suggest one specific dinner for tonight. Either revisit a recipe you love or propose something new that fits your taste.
 Keep it very short: one sentence for the suggestion name and one sentence explaining why it fits tonight.
 Do not include JSON or recipe tags. Be warm and direct.`;
 
-    const userMessage = `Their top-rated and favorite recipes:\n${catalogSummary}\n\nAll recipe titles (for context — don't just repeat these):\n${allTitles}\n\nWhat should they make for dinner tonight?`;
+    const userMessage = `Your top-rated and favorite recipes:\n${catalogSummary}\n\nAll recipe titles (for context — don't just repeat these):\n${allTitles}\n\nWhat should you make for dinner tonight?`;
 
     // 7. Call Claude Haiku for the suggestion
     const anthropicRes = await fetch(ANTHROPIC_URL, {
@@ -202,7 +202,8 @@ Do not include JSON or recipe tags. Be warm and direct.`;
     const mentionedRecipe = recipes.find(r =>
       suggestion.toLowerCase().includes(r.title.toLowerCase())
     );
-    const baseUrl = "https://cmlb-recipes.web.app/";
+    // Replace YOUR_PROJECT_ID with your Firebase project ID, or load from an environment variable
+    const baseUrl = "https://YOUR_PROJECT_ID.web.app/";
     const deepLink = mentionedRecipe
       ? `${baseUrl}?recipeId=${mentionedRecipe.id}`
       : `${baseUrl}?chat=1`;
@@ -220,8 +221,8 @@ Do not include JSON or recipe tags. Be warm and direct.`;
       data: notifData,
       webpush: {
         notification: {
-          icon: "https://cmlb-recipes.web.app/favicon.svg",
-          badge: "https://cmlb-recipes.web.app/favicon.svg",
+          icon: "https://YOUR_PROJECT_ID.web.app/favicon.svg",
+          badge: "https://YOUR_PROJECT_ID.web.app/favicon.svg",
           requireInteraction: false,
         },
         fcmOptions: {
@@ -264,9 +265,9 @@ Do not include JSON or recipe tags. Be warm and direct.`;
 );
 
 // ── getCustomToken ────────────────────────────────────────────────────────────
-// Callable function used for cross-app SSO. A signed-in user on cmlb-apps
-// calls this to get a short-lived custom token, which is then passed to
-// cmlb-recipes via URL param so the user doesn't need to sign in twice.
+// Callable function used for cross-app SSO. A signed-in user in another app
+// calls this to get a short-lived custom token, which is then passed via URL
+// param so the user doesn't need to sign in twice.
 exports.getCustomToken = onCall(async (request) => {
   if (!request.auth) {
     throw new Error("unauthenticated");
