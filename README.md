@@ -1,40 +1,31 @@
-# CMLB Recipe Catalog
+# Recipe Catalog
 
-Chris & Lindsay's private recipe catalog with Google Auth, Firestore storage, and Claude-powered recipe suggestions.
-
-## Live Site
-[https://cjroberts28.github.io/cmlbRecipes](https://cjroberts28.github.io/cmlbRecipes)
-
-## Stack
-- **Frontend**: Static HTML/JS on GitHub Pages
-- **Auth**: Firebase Google Authentication (whitelist: c.jonesroberts@gmail.com, l.robertsmlt@gmail.com)
-- **Database**: Firebase Firestore
-- **AI**: Claude via Anthropic API (called directly from browser)
-- **Backend**: None — Render is no longer needed
+A self-hostable private recipe catalog with Claude AI integration.
 
 ## Features
-- Google sign-in (private, whitelisted accounts only)
-- Browse, add, edit, delete recipes
-- Claude chat panel for recipe ideas — suggests recipes and loads them into the form with one click
-- Recipes shared in real time via Firestore
 
-## Firestore Security Rules
-Set these in Firebase Console → Firestore → Rules:
+- Google sign-in (restricted to a whitelist of email addresses)
+- Browse, add, edit, and delete recipes with a clean, minimal UI
+- Claude chat panel for recipe ideas — suggests recipes and loads them into the add form with one click
+- Push notifications with a daily Claude-generated dinner suggestion
+- Recipes synced in real time via Firestore
+- Shareable recipe links (public read, auth required to list)
+- Designed for small groups (2 users by default, easily extended)
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /recipes/{recipeId} {
-      allow read, write: if request.auth != null &&
-        request.auth.token.email in [
-          'c.jonesroberts@gmail.com',
-          'l.robertsmlt@gmail.com'
-        ];
-    }
-  }
-}
-```
+## Stack
 
-## No backend needed
-The Render/FastAPI backend is no longer part of this stack. Everything runs directly from the browser via Firebase and the Anthropic API.
+- **Frontend**: Static HTML/JS (no build step) on Firebase Hosting
+- **Auth**: Firebase Google Authentication (whitelisted emails)
+- **Database**: Firebase Firestore
+- **AI**: Claude via Anthropic API (proxied through a Cloud Function)
+- **Notifications**: Firebase Cloud Messaging + scheduled Cloud Function
+
+## Deployment
+
+See [SETUP.md](SETUP.md) for step-by-step deployment instructions.
+
+The short version:
+1. Fork this repo
+2. Create a Firebase project and an Anthropic account
+3. Copy `config.example.js` to `config.js` and fill in your values
+4. Deploy to Firebase Hosting — the app is live at `https://YOUR_PROJECT_ID.web.app`

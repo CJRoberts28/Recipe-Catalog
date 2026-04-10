@@ -1,184 +1,142 @@
-# CMLB Recipe Catalog — Project Context
+# Recipe Catalog — AI Session Guide
 
-This file provides context for Claude Code and VS Code Claude extension sessions. Read this before making any changes.
+This file provides context for Claude Code sessions working on this codebase.
 
 ---
 
 ## What This Is
 
-A private recipe catalog web app for Chris and Lindsay. They use it to save, browse, and discover recipes. Claude is integrated directly into the app as a recipe suggestion assistant.
+A self-hostable private recipe catalog web app. Users save, browse, and discover recipes. Claude is integrated directly as a recipe suggestion assistant via a Cloud Function proxy.
 
-**Live site:** https://cmlb-recipes.web.app
-**GitHub repo:** https://github.com/CJRoberts28/cmlbRecipes
+The app is designed for a small group of users (2 by default, easily extended). Authentication is Google OAuth; only whitelisted emails can sign in.
 
 ---
 
 ## Architecture
 
-This is a fully static single-page app hosted on Firebase Hosting. There is no traditional backend.
+Fully static single-page app hosted on Firebase Hosting. No traditional backend.
 
 ```
 Firebase Hosting (static)
-├── index.html        — entire frontend SPA (HTML + CSS + JS in one file)
-├── favicon.svg       — custom C&L monogram icon
-├── firebase.json     — Firebase project config (deploy from repo root)
-├── .firebaserc       — Firebase project alias (cmlb-recipes)
-├── CLAUDE.md         — this file
-└── README.md         — user-facing documentation
+├── index.html               — entire frontend SPA (HTML + CSS + JS in one file)
+├── config.js                — runtime config (not committed; copy from config.example.js)
+├── config.example.js        — template with placeholder values
+├── favicon.svg              — app icon
+├── firebase-messaging-sw.js — service worker for push notifications
+├── firebase.json            — Firebase deploy config
+├── .firebaserc              — Firebase project alias
+├── firestore.rules          — Firestore security rules
+└── functions/               — Cloud Functions source
 
-Firebase (external services)
-├── Hosting           — static frontend at cmlb-recipes.web.app
-├── Authentication    — Google OAuth, whitelisted to two emails
-├── Firestore         — recipe storage (NoSQL)
-└── Cloud Functions   — single function: claudeProxy (Anthropic API proxy)
+Firebase services
+├── Hosting         — static frontend
+├── Authentication  — Google OAuth, restricted to whitelisted emails
+├── Firestore       — recipe storage (NoSQL)
+└── Cloud Functions — claudeProxy (Anthropic API proxy), sendDinnerSuggestion, getCustomToken
 
 Anthropic API
-└── Called via claudeProxy Cloud Function (never directly from browser)
+└── Called via claudeProxy Cloud Function — never directly from the browser
 ```
 
-### Why this architecture
-- No cold starts (replaced an earlier Render/FastAPI backend that had this problem)
-- No CORS issues (Cloud Function handles the Anthropic API call server-side)
-- Free to run at this scale (Firebase Blaze plan, minimal usage)
-- Everything in one HTML file keeps deployment simple — just push to GitHub
+---
+
+## config.js
+
+Loaded as a `<script>` tag before `index.html` runs. Sets `window.APP_CONFIG`. Not committed — users copy `config.example.js` to `config.js` and fill in their values.
+
+| Key | What it is | Where to get it |
+|-----|-----------|-----------------|
+| `appName` | Display name in browser tab, sidebar, and notifications | Choose freely |
+| `ownerNames` | Name(s) injected into Claude's system prompt | Choose freely |
+| `firebase.apiKey` | Firebase Web API key | Firebase Console > Project Settings > General > Your apps > Web app |
+| `firebase.authDomain` | Firebase auth domain | Same location as apiKey |
+| `firebase.projectId` | Firebase project ID | Same location as apiKey |
+| `firebase.storageBucket` | Firebase storage bucket | Same location as apiKey |
+| `firebase.messagingSenderId` | FCM sender ID | Same location as apiKey |
+| `firebase.appId` | Firebase app ID | Same location as apiKey |
+| `appDomain` | Full hosting URL, no trailing slash | `https://YOUR_PROJECT_ID.web.app` after deploy |
+| `claudeProxyUrl` | URL of the deployed `claudeProxy` Cloud Function | Printed after `firebase deploy --only functions` |
+| `vapidKey` | VAPID public key for push notifications | Firebase Console > Project Settings > Cloud Messaging > Web Push certificates |
 
 ---
 
-## Firebase Project
+## Firestore Schema
 
-**Project ID:** cmlb-recipes
-**Region:** us-central1
+Collection: `recipes` — each document has:
+- `title` (string)
+- `category` (string) — Dinner | Lunch | Breakfast | Snack | Dessert | Side
+- `rating` (number) — 1–5
+- `favorite` (boolean)
+- `cook_time` (number) — minutes
+- `tags` (array of strings)
+- `date` (string) — YYYY-MM-DD
+- `notes` (string)
+- `components` (array of objects) — each has: `name`, `ingredients` (string[]), `steps` (string[])
+- `createdBy` (string) — email of who saved it
+- `updatedAt` (string) — ISO timestamp
 
-### Firestore
-Collection: recipes
-Each document has these fields:
-
-- title (string)
-- category (string) — Dinner | Lunch | Breakfast | Snack | Dessert | Side
-- rating (number) — 1-5
-- favorite (boolean)
-- cook_time (number) — minutes
-- tags (array of strings)
-- date (string) — YYYY-MM-DD
-- notes (string)
-- components (array of objects) — each has: name, ingredients (string[]), steps (string[])
-- createdBy (string) — email of who saved it
-- updatedAt (string) — ISO timestamp
-
-### Cloud Functions
-**Location:** cmlb-functions/functions/index.js
-**Function name:** claudeProxy
-**URL:** https://us-central1-cmlb-recipes.cloudfunctions.net/claudeProxy
-
-The function is a simple POST proxy: it receives {system, messages} from the frontend, attaches the Anthropic API key (stored as a Firebase Secret named ANTHROPIC_API_KEY), forwards to api.anthropic.com/v1/messages, and returns the response.
-
-To redeploy after changes:
-```bash
-firebase deploy --only functions
-```
-(Run from the repo root — `firebase.json` and `.firebaserc` are now checked in.)
-
-### Auth
-Google OAuth only. Whitelisted emails:
-- c.jonesroberts@gmail.com (Chris)
-- l.robertsmlt@gmail.com (Lindsay)
-
-Firestore security rules restrict read/write to these two emails only.
+Other collections: `settings/notifications`, `fcm_tokens/{uid}`, `pantry/{docId}`, `allowedUsers/{email}`, `sharedLinks/{token}`
 
 ---
 
-## Frontend (index.html)
+## Cloud Functions (`functions/index.js`)
 
-The entire frontend is a single HTML file. It uses vanilla JS with no build step, no npm, no bundler.
+| Function | Type | Purpose |
+|----------|------|---------|
+| `claudeProxy` | HTTP | Proxies `{system, messages}` to Anthropic API; verifies Firebase ID token and `allowedUsers` before forwarding |
+| `sendDinnerSuggestion` | Scheduled (hourly) | Reads notification settings, picks top-rated recipes, asks Claude Haiku for a dinner idea, sends FCM push to all users |
+| `getCustomToken` | Callable | Cross-app SSO helper — exchanges a verified session for a custom Firebase token |
 
-### Libraries loaded via CDN
-- Firebase 10.12.0 (auth + firestore) — ES modules from gstatic
-- Google Fonts — Playfair Display + Lora
+The Anthropic API key is stored as a Firebase Secret (`ANTHROPIC_API_KEY`), never in code.
 
-### State management
-A single state object holds all app state. render() re-renders the entire #root div on every state change. bindEvents() re-attaches all event listeners after each render.
-
-```javascript
-state = {
-  user, recipes, selected,
-  view,           // 'list' | 'detail' | 'form'
-  search, category,
-  successMsg, formError,
-  editingId, form,
-  showChat, chatMessages, chatLoading,
-  pendingRecipe
-}
-```
-
-### Mobile layout
-- Below 767px: single-panel view with bottom nav (Recipes | Detail | Claude tabs)
-- mobilePanel variable tracks which panel is active
-- Chat panel uses position:fixed; top:0; bottom:60px to leave room for bottom nav
-- 768px-1024px: two-column, chat as overlay
-- Above 1024px: three-column (sidebar + main + chat panel)
-
-### Key functions
-- render() — full re-render
-- renderDetail(r) — recipe detail view
-- renderForm() — add/edit form
-- renderChatPanelInner() — Claude chat panel contents
-- formatStep(s, ingredients) — renders a step with bolded quantities/temps and ingredient amounts injected inline
-- saveRecipe() — writes to Firestore
-- deleteRecipe(id) — deletes from Firestore
-- sendChat(message) — calls claudeProxy, parses recipe JSON from response
-- loadRecipeFromChat() — loads Claude-suggested recipe into the add form
-
-### Claude chat integration
-Claude responds with conversational text plus a recipe JSON block wrapped in recipe tags. The app strips the JSON from the displayed message and shows a "Load into form" button when a recipe is detected. The system prompt instructs Claude to always include valid JSON in recipe tags.
+**Important:** `functions/index.js` has a `baseUrl` placeholder (`YOUR_PROJECT_ID.web.app`). When helping a user deploy, remind them to update this to their actual domain before deploying functions, or the push notification deep links will be broken.
 
 ---
 
-## Design System
+## Frontend (`index.html`)
 
-**Theme:** Rustic editorial — aged paper, earthy tones, serif typography
-**Fonts:** Playfair Display (headings, italic accents) + Lora (body)
+Single HTML file, vanilla JS, no build step. State is managed in a single `state` object; `render()` re-renders `#root` on every change.
 
-CSS variables:
-- --bg: #f4f0e8 — parchment background
-- --surface: #faf7f2 — card/panel background
-- --surface2: #ede8de — input/filter background
-- --border: #d4c9b4 — all borders
-- --accent: #7a4a2a — primary brown, buttons, active states
-- --accent-light: #b07040 — hover states, stars, ingredient amounts
-- --accent-pale: #e8d8c4 — hover backgrounds
-- --text: #2c1f0e — primary text
-- --text-muted: #7a6248 — secondary text, step text
-- --text-dim: #b09a80 — placeholder, disabled
-- --red: #9b2335 — delete, favorites heart
-- --green: #2d6a4f — success messages
+Key functions:
+- `render()` — full re-render
+- `renderDetail(r)` — recipe detail view
+- `renderForm()` — add/edit form
+- `renderChatPanelInner()` — Claude chat panel
+- `formatStep(s, ingredients)` — renders step with bolded quantities and inline ingredient amounts
+- `saveRecipe()` — writes to Firestore
+- `deleteRecipe(id)` — deletes from Firestore
+- `sendChat(message)` — calls `claudeProxy`, parses recipe JSON from response
+- `loadRecipeFromChat()` — loads Claude-suggested recipe into the add form
 
-**Design principles:**
-- Minimal formatting, no unnecessary shadows or gradients
-- Sharp corners (border-radius 3-4px) not rounded
-- Uppercase spaced labels for field headings
-- Italic Playfair Display for titles and section headers
-- Paper texture overlay via SVG filter on body::before
+Claude responds with conversational text plus a recipe JSON block wrapped in `<recipe>` tags. The app strips the JSON from the displayed message and shows a "Load into form" button.
 
 ---
 
-## Known Issues / Notes
+## How to Help a User Deploy Their Own Copy
 
-- Ingredient amount injection in steps works best when ingredients are formatted as "1 pound ground beef" rather than just "ground beef". Descriptive suffixes like ", drained and rinsed" are stripped automatically.
-- The Firebase free invocation tier is very generous — at current usage (2 users) Cloud Function costs are negligible.
-- GitHub Pages has no server-side logic — all routing, auth, and data fetching happens client-side.
-- The Notion/FastAPI backend from an earlier iteration has been fully replaced and is no longer used.
+1. Have them follow `SETUP.md` step by step.
+2. Common blockers:
+   - Forgot to update `firestore.rules` with their email(s)
+   - Forgot to add their email to `allowedUsers` in Firestore Console
+   - Deployed functions before setting the `ANTHROPIC_API_KEY` secret
+   - `claudeProxyUrl` in `config.js` not updated after deploying functions
+   - `baseUrl` in `functions/index.js` still says `YOUR_PROJECT_ID` — push notifications will have broken deep links
+3. After changes to `index.html` or static files: `firebase deploy --only hosting`
+4. After changes to `functions/index.js`: `firebase deploy --only functions`
+5. After changes to `firestore.rules`: `firebase deploy --only firestore:rules`
 
 ---
 
-## Backlog
+## Development Workflow
 
-- Nothing currently queued
+1. Edit `index.html` (frontend) or `functions/index.js` (Cloud Functions)
+2. Push to `main` — GitHub Actions auto-deploys the relevant service
+3. Test on mobile with a hard refresh or incognito tab to bypass cache
+4. No build step, no npm for the frontend — just edit and push
 
----
+GitHub Actions workflows in `.github/workflows/`:
+- `deploy-hosting.yml` — triggers on any push to main
+- `deploy-functions.yml` — triggers when `functions/**` changes
+- `deploy-firestore-rules.yml` — triggers when `firestore.rules` changes
 
-## How to Make Changes
-
-1. Edit index.html directly (no build step needed)
-2. For Cloud Function changes, edit cmlb-functions/functions/index.js and run: firebase deploy --only functions
-3. Push index.html to GitHub — GitHub Pages deploys automatically within ~30 seconds
-4. Test on mobile with a hard refresh or incognito tab to bypass cache
+Requires GitHub secret `FIREBASE_TOKEN` and variable `FIREBASE_PROJECT_ID`.

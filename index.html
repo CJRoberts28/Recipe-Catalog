@@ -330,7 +330,7 @@ const provider = new GoogleAuthProvider();
 let swRegistration = null;
 let notifMessageUnsubscribe = null;
 
-// Cross-app SSO: if cmlb-apps passed a custom token, sign in with it silently.
+// Cross-app SSO: if another app passed a custom token, sign in with it silently.
 // We store the promise so onAuthStateChanged can wait for it — otherwise the
 // listener fires immediately with null and shows the login screen mid-flight.
 const ctSignInReady = (async () => {
