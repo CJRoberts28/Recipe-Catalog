@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CMLB Recipe Catalog</title>
+  <title>Recipe Catalog</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -302,6 +302,8 @@
 <body>
 <div id="root"><div class="loading-screen">Loading...</div></div>
 
+<script src="config.js"></script>
+
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -313,19 +315,12 @@ import { getMessaging, getToken, onMessage }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 import { checkAllowed } from "./src/auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDtszGE-y56VKC0vtXUdRY12Iujuh_lJN8",
-  authDomain: "cmlb-recipes.firebaseapp.com",
-  projectId: "cmlb-recipes",
-  storageBucket: "cmlb-recipes.firebasestorage.app",
-  messagingSenderId: "646061210319",
-  appId: "1:646061210319:web:5208edb8a47a8c959d15ba"
-};
+const firebaseConfig = window.APP_CONFIG.firebase;
 
-const ANTHROPIC_API = "https://us-central1-cmlb-recipes.cloudfunctions.net/claudeProxy";
-// SETUP REQUIRED: Replace with your VAPID key from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-const VAPID_KEY = "BP9UgNCtE29Yg3CLr9hqgIGA8k7y4kR0l5sRIJrckaXxyQMETS7QfAB_-etP6ee987Og2J-I2A7XJd2DrEMLAtg";
+const ANTHROPIC_API = window.APP_CONFIG.claudeProxyUrl;
+const VAPID_KEY = window.APP_CONFIG.vapidKey;
 const CATS = ["Dinner","Lunch","Breakfast","Snack","Dessert","Side"];
+document.title = window.APP_CONFIG.appName;
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -900,11 +895,11 @@ function renderPublicRecipe(r) {
   document.getElementById('root').innerHTML = `
   <div style="max-width:760px;margin:0 auto;padding:36px 20px;">
     <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'Playfair Display',serif;font-size:13px;font-style:italic;color:var(--accent-light);">CMLB Recipe Catalog — Shared Recipe</div>
+      <div style="font-family:'Playfair Display',serif;font-size:13px;font-style:italic;color:var(--accent-light);">${window.APP_CONFIG.appName} — Shared Recipe</div>
     </div>
     ${renderDetail(r, {readOnly:true})}
     <div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--text-muted);font-style:italic;">
-      Shared from <a href="https://cmlb-recipes.web.app/" style="color:var(--accent);">CMLB Recipes</a>
+      Shared from <a href="${window.APP_CONFIG.appDomain}/" style="color:var(--accent);">${window.APP_CONFIG.appName}</a>
     </div>
   </div>`;
 }
@@ -1030,7 +1025,7 @@ async function sendChat(message) {
   const pantryLine = state.pantry.length
     ? `\n\nCurrent pantry: ${state.pantry.join(', ')}.`
     : '';
-  const systemPrompt = `You are a friendly cooking assistant for Chris and Lindsay. Help them come up with delicious recipes based on what they have or what they're in the mood for.${pantryLine}
+  const systemPrompt = `You are a friendly cooking assistant for ${window.APP_CONFIG.ownerNames}. Help them come up with delicious recipes based on what they have or what they're in the mood for.${pantryLine}
 
 When suggesting a recipe, always format it as valid JSON at the end of your message inside a <recipe> tag, like this:
 <recipe>
@@ -1166,9 +1161,9 @@ function renderLogin() {
   <div class="login-screen">
     <div class="login-card">
       <div class="monogram">C&L</div>
-      <h1>CMLB Recipes</h1>
+      <h1>${window.APP_CONFIG.appName}</h1>
       <hr class="divider">
-      <p>Chris & Lindsay's private recipe catalog</p>
+      <p>${window.APP_CONFIG.ownerNames}'s private recipe catalog</p>
       <button class="google-btn" id="google-signin-btn">
         <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Sign in with Google
@@ -1236,7 +1231,7 @@ function render() {
   <div class="app">
     <div class="sidebar${mobile && mobilePanel !== 'list' ? ' hidden' : ''}">
       <div class="sidebar-header">
-        <h1>🍽 CMLB Recipes</h1>
+        <h1>🍽 ${window.APP_CONFIG.appName}</h1>
         <div class="user-row">
           ${state.user.photoURL?`<img class="user-avatar" src="${esc(state.user.photoURL)}">`:''}
           <span class="user-name">${esc(state.user.displayName||state.user.email)}</span>
@@ -1490,7 +1485,7 @@ function renderChatPanelInner() {
       <button class="close-chat-btn" id="close-chat">✕</button>
     </div>
     <div class="chat-messages" id="chat-messages">
-      ${msgs.length===0?`<div class="chat-msg assistant">Hi! I'm Claude. Tell me what you're in the mood for, what ingredients you have, or ask me to suggest a recipe — I'll come up with something delicious for Chris & Lindsay. 🍽</div>`:''}
+      ${msgs.length===0?`<div class="chat-msg assistant">Hi! I'm Claude. Tell me what you're in the mood for, what ingredients you have, or ask me to suggest a recipe — I'll come up with something delicious for ${window.APP_CONFIG.ownerNames}. 🍽</div>`:''}
       ${msgs.map(m => {
         const textContent = Array.isArray(m.content)
           ? (m.content.find(b => b.type === 'text')?.text || '')
@@ -1634,7 +1629,7 @@ function bindEvents() {
     btn.disabled = true; btn.textContent = '⏳…';
     try {
       const token = await createShareLink(r);
-      const url = `https://cmlb-recipes.web.app/?share=${token}`;
+      const url = `${window.APP_CONFIG.appDomain}/?share=${token}`;
       await navigator.clipboard.writeText(url);
       state.successMsg = "Public share link copied!";
     } catch(e) {
