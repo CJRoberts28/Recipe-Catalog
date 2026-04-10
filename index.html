@@ -129,6 +129,23 @@
     .col-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; font-family:'Lora',serif; }
     .ingredient-item { display:flex; align-items:baseline; gap:8px; padding:6px 0; border-bottom:1px solid var(--surface2); font-size:15px; color:var(--text); }
     .ingredient-item::before { content:'—'; color:var(--accent-light); flex-shrink:0; font-size:12px; }
+    .sub-ing-item { cursor:pointer; transition:background 0.15s; }
+    .sub-ing-item:hover { background:var(--accent-pale); }
+    .sub-ing-item.selected { background:#fff5f5; color:var(--text-muted); text-decoration:line-through; }
+    .sub-ing-item.selected::before { content:'✕'; color:var(--red) !important; }
+    .sub-bar { position:sticky; bottom:0; background:var(--bg); border-top:1px solid var(--border); padding:10px 0; display:flex; gap:8px; align-items:center; margin-top:16px; z-index:10; }
+    .sub-find-btn { flex:1; background:var(--accent); border:none; color:#faf7f2; padding:9px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:14px; font-style:italic; cursor:pointer; }
+    .sub-find-btn:disabled { opacity:.5; cursor:default; }
+    .sub-cancel-btn { background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:3px; padding:9px 12px; font-size:13px; cursor:pointer; }
+    .sub-result-panel { margin:20px 0; border:2px solid var(--accent-light); border-radius:4px; padding:16px 18px; background:var(--surface); }
+    .sub-result-label { font-family:'Playfair Display',serif; font-size:13px; font-style:italic; color:var(--accent); margin-bottom:12px; }
+    .sub-result-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+    .sub-save-new { background:var(--accent); border:none; color:#faf7f2; padding:8px 16px; border-radius:3px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; }
+    .sub-update { background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 16px; border-radius:3px; font-size:13px; cursor:pointer; }
+    .sub-dismiss { background:none; border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:3px; font-size:13px; cursor:pointer; }
+    .find-img-btn { margin-left:8px; background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:3px; padding:5px 10px; font-size:12px; cursor:pointer; vertical-align:middle; }
+    .find-img-btn:hover:not(:disabled) { border-color:var(--accent-light); color:var(--accent); background:var(--accent-pale); }
+    .find-img-btn:disabled { opacity:.5; cursor:default; }
     .step-item { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--surface2); font-size:15px; color:var(--text-muted); line-height:1.65; }
     .step-item strong { color:var(--accent); font-weight:600; }
     .step-num { color:var(--accent); font-family:'Playfair Display',serif; font-size:15px; flex-shrink:0; width:18px; font-style:italic; }
@@ -153,6 +170,7 @@
     .btn { padding:7px 16px; border-radius:3px; font-family:'Lora',serif; font-size:14px; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); transition:all 0.2s; }
     .btn:hover { border-color:var(--accent-light); color:var(--accent); background:var(--accent-pale); }
     .btn-danger:hover { border-color:var(--red); color:var(--red); background:#fff5f5; }
+    .active-btn { border-color:var(--accent) !important; color:var(--accent) !important; background:var(--accent-pale) !important; }
 
     /* Form */
     .form-wrap { max-width:700px; }
@@ -327,7 +345,8 @@ let state = {
   pantry: [], pantryPanel: false,
   timers: [],
   scaledServings: null,
-  importPanel: false, importText: "", importLoading: false, importError: null
+  importPanel: false, importText: "", importLoading: false, importError: null,
+  subMode: false, subSelected: [], subResult: null, subLoading: false, subError: null
 };
 let timerIdCounter = 0;
 
@@ -621,6 +640,66 @@ function renderPantryPanel() {
     </div>
     ${state.pantry.length ? `<button id="pantry-ask-btn" style="width:100%;margin-top:8px;background:var(--accent);border:none;color:#faf7f2;padding:6px 10px;border-radius:3px;font-family:'Playfair Display',serif;font-size:12px;font-style:italic;cursor:pointer;">✦ What can I make with this?</button>` : ''}
   </div>`;
+}
+
+// ── Recipe Image Auto-fetch ───────────────────────────────────────────────────
+async function fetchRecipeImage(title) {
+  try {
+    const q = encodeURIComponent(title.trim());
+    const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${q}`);
+    const data = await res.json();
+    if (data.meals?.[0]?.strMealThumb) return data.meals[0].strMealThumb;
+    // Retry with first keyword only
+    const keyword = title.split(/[\s,]+/)[0];
+    if (keyword && keyword.toLowerCase() !== title.trim().toLowerCase()) {
+      const res2 = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(keyword)}`);
+      const data2 = await res2.json();
+      if (data2.meals?.[0]?.strMealThumb) return data2.meals[0].strMealThumb;
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+// ── Ingredient Substitutions ──────────────────────────────────────────────────
+function toggleSubIngredient(ing) {
+  const idx = state.subSelected.indexOf(ing);
+  if (idx >= 0) state.subSelected.splice(idx, 1);
+  else state.subSelected.push(ing);
+  render();
+}
+
+async function findSubstitutions() {
+  const r = state.selected;
+  if (!r || state.subSelected.length === 0) return;
+  state.subLoading = true; state.subError = null; render();
+  const recipeJson = JSON.stringify({ title: r.title, category: r.category,
+    cook_time: r.cook_time, servings: r.servings, components: r.components }, null, 2);
+  const systemPrompt = `You are a recipe assistant helping adapt recipes based on available ingredients.
+The user doesn't have certain ingredients. Suggest practical substitutions and output the COMPLETE modified recipe as JSON inside <recipe> tags using the same schema.
+Only change what's needed. Add a brief explanation in the "notes" field describing the substitutions made.`;
+  const userMsg = `Recipe:\n${recipeJson}\n\nIngredients I don't have: ${state.subSelected.join(', ')}\n\nPlease substitute these and update the recipe accordingly.`;
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({ system: systemPrompt, messages: [{ role: "user", content: userMsg }] })
+    });
+    if (!res.ok) throw new Error("Request failed");
+    const data = await res.json();
+    const text = data.content?.[0]?.text || "";
+    const match = text.match(/<recipe>([\s\S]*?)<\/recipe>/);
+    if (!match) throw new Error("No recipe found in response");
+    const parsed = JSON.parse(match[1].trim());
+    if (!parsed?.components) throw new Error("Invalid response");
+    state.subResult = parsed;
+    state.subLoading = false; state.subMode = false;
+    render();
+  } catch(e) {
+    state.subLoading = false;
+    state.subError = e.message || "Something went wrong. Try again.";
+    render();
+  }
 }
 
 function renderImportPanel() {
@@ -992,6 +1071,12 @@ function loadRecipeFromChat() {
   state.view = "form";
   mobilePanel = "form";
   render();
+  // Auto-fetch image if none provided
+  if (!state.form.imageUrl && state.form.title) {
+    fetchRecipeImage(state.form.title).then(url => {
+      if (url && !state.form.imageUrl) { state.form.imageUrl = url; render(); }
+    });
+  }
 }
 
 // ── Form helpers ──────────────────────────────────────────
@@ -1190,6 +1275,7 @@ function renderDetail(r, {readOnly=false}={}) {
       <button class="btn" id="print-btn">⎙ Print</button>
       <button class="btn" id="share-btn">⎘ Share</button>
       <button class="btn" id="refine-btn">✦ Refine</button>
+      <button class="btn${state.subMode?' active-btn':''}" id="sub-btn" title="Select ingredients you don't have">🔄 Substitute</button>
     </div>` : ''}
     <div class="recipe-title-wrap">
       <h1 class="recipe-title">${esc(r.title)}</h1>
@@ -1215,13 +1301,38 @@ function renderDetail(r, {readOnly=false}={}) {
     </div>` : ''}
     ${r.notes?`<div class="notes-block">${esc(r.notes)}</div>`:''}
     ${r.imageUrl ? `<div class="recipe-image-wrap"><img class="recipe-image" src="${esc(r.imageUrl)}" alt="${esc(r.title)}" onerror="this.parentElement.style.display='none'"></div>` : ''}
+    ${!readOnly && state.subMode ? `<div style="font-size:12px;color:var(--accent);font-style:italic;margin:8px 0 4px;">Tap the ingredients you don't have, then click Substitute.</div>` : ''}
+    ${!readOnly && state.subResult ? `<div class="sub-result-panel">
+      <div class="sub-result-label">✦ Adapted recipe — review the substitutions below:</div>
+      ${state.subResult.notes ? `<div class="notes-block" style="margin-bottom:14px;">${esc(state.subResult.notes)}</div>` : ''}
+      ${(Array.isArray(state.subResult.components)?state.subResult.components:[]).map(c=>`
+        <div class="component" style="margin-bottom:16px;">
+          <div class="component-title">${esc(c.name)}</div>
+          <div class="component-grid">
+            <div><div class="col-label">Ingredients</div>${(c.ingredients||[]).map(i=>`<div class="ingredient-item">${esc(i)}</div>`).join('')}</div>
+            <div><div class="col-label">Method</div>${(c.steps||[]).map((s,si)=>`<div class="step-item"><span class="step-num">${si+1}.</span><span>${formatStep(s,c.ingredients||[])}</span></div>`).join('')}</div>
+          </div>
+        </div>`).join('')}
+      <div class="sub-result-actions">
+        <button class="sub-save-new" id="sub-save-new-btn">Save as New Recipe</button>
+        <button class="sub-update" id="sub-update-btn">Update This Recipe</button>
+        <button class="sub-dismiss" id="sub-dismiss-btn">Dismiss</button>
+      </div>
+    </div>` : ''}
     ${comps.map(c=>`
       <div class="component">
         <div class="component-title">${esc(c.name)}</div>
         <div class="component-grid">
           <div>
             <div class="col-label">Ingredients</div>
-            ${(c.ingredients||[]).map(i=>`<div class="ingredient-item">${esc(scaleIngredient(i, scaleFactor))}</div>`).join('')}
+            ${(c.ingredients||[]).map(i=>{
+              const displayed = esc(scaleIngredient(i, scaleFactor));
+              if (!readOnly && state.subMode) {
+                const sel = state.subSelected.includes(i);
+                return `<div class="ingredient-item sub-ing-item${sel?' selected':''}" data-ing="${esc(i)}">${displayed}</div>`;
+              }
+              return `<div class="ingredient-item">${displayed}</div>`;
+            }).join('')}
           </div>
           <div>
             <div class="col-label">Method</div>
@@ -1229,6 +1340,13 @@ function renderDetail(r, {readOnly=false}={}) {
           </div>
         </div>
       </div>`).join('')}
+    ${!readOnly && state.subMode ? `<div class="sub-bar">
+      ${state.subError ? `<span style="font-size:11px;color:var(--red);font-style:italic;flex:1;">${esc(state.subError)}</span>` : ''}
+      <button class="sub-find-btn" id="sub-find-btn" ${state.subLoading||state.subSelected.length===0?'disabled':''}>
+        ${state.subLoading ? 'Finding alternatives…' : `✦ Substitute ${state.subSelected.length} ingredient${state.subSelected.length!==1?'s':''}`}
+      </button>
+      <button class="sub-cancel-btn" id="sub-cancel-btn">Cancel</button>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1247,8 +1365,13 @@ function renderForm() {
       <div class="form-group"><label>Servings</label>
         <input id="f-servings" class="form-control" type="number" min="1" value="${esc(String(f.servings||''))}" placeholder="4"></div>
     </div>
-    <div class="form-group"><label>Recipe Image URL <span style="font-weight:normal;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-dim);">(optional — paste any image link)</span></label>
-      <input id="f-imageurl" class="form-control" value="${esc(f.imageUrl||'')}" placeholder="https://..."></div>
+    <div class="form-group"><label>Recipe Image URL <span style="font-weight:normal;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-dim);">(optional)</span></label>
+      <div style="display:flex;align-items:center;gap:0;">
+        <input id="f-imageurl" class="form-control" style="flex:1;" value="${esc(f.imageUrl||'')}" placeholder="https://...">
+        <button class="find-img-btn" id="find-img-btn" type="button">🔍 Find Image</button>
+      </div>
+      ${f.imageUrl ? `<img src="${esc(f.imageUrl)}" style="margin-top:8px;max-height:80px;border-radius:3px;border:1px solid var(--border);object-fit:cover;" onerror="this.style.display='none'">` : ''}
+    </div>
     <div class="form-grid">
       <div class="form-group"><label>Rating</label>
         <div class="star-select">${[1,2,3,4,5].map(n=>`<span class="star${n<=f.rating?' lit':''}" data-n="${n}">★</span>`).join('')}</div></div>
@@ -1334,7 +1457,7 @@ function bindEvents() {
   on(".filter-btn","click",e=>{state.category=e.currentTarget.dataset.cat;render();});
   on(".recipe-item","click",e=>{
     const r=state.recipes.find(r=>r.id===e.currentTarget.dataset.id);
-    if(r){state.selected=r;state.view="detail";state.successMsg=null;state.scaledServings=null;mobilePanel="detail";history.pushState({view:"detail",recipeId:r.id},'');render();}
+    if(r){state.selected=r;state.view="detail";state.successMsg=null;state.scaledServings=null;state.subMode=false;state.subSelected=[];state.subResult=null;mobilePanel="detail";history.pushState({view:"detail",recipeId:r.id},'');render();}
   });
   g("add-btn")?.addEventListener("click",()=>{ startAdd(); mobilePanel="form"; });
   g("chat-btn")?.addEventListener("click",()=>{state.showChat=!state.showChat;render();});
@@ -1365,6 +1488,47 @@ function bindEvents() {
   g("edit-btn")?.addEventListener("click",()=>startEdit(state.selected));
   g("del-btn")?.addEventListener("click",()=>deleteRecipe(state.selected.id));
   g("print-btn")?.addEventListener("click",()=>window.print());
+  // Substitutions
+  g("sub-btn")?.addEventListener("click",()=>{
+    state.subMode=!state.subMode; state.subSelected=[]; state.subResult=null; state.subError=null; render();
+  });
+  g("sub-find-btn")?.addEventListener("click",()=>findSubstitutions());
+  g("sub-cancel-btn")?.addEventListener("click",()=>{ state.subMode=false; state.subSelected=[]; state.subError=null; render(); });
+  g("sub-dismiss-btn")?.addEventListener("click",()=>{ state.subResult=null; render(); });
+  g("sub-save-new-btn")?.addEventListener("click",()=>{
+    const sr=state.subResult; if(!sr) return;
+    state.form={...emptyForm(), title:(state.selected?.title||'')+' (adapted)',
+      category:sr.category||state.selected?.category||'Dinner',
+      cook_time:sr.cook_time||state.selected?.cook_time||'',
+      servings:sr.servings||state.selected?.servings||'',
+      tags:(sr.tags||state.selected?.tags||[]).join(', '),
+      notes:sr.notes||'', imageUrl:state.selected?.imageUrl||'',
+      components:(sr.components||[]).map(c=>({name:c.name||'',ingredients:c.ingredients?.length?[...c.ingredients]:[''],steps:c.steps?.length?[...c.steps]:['']})
+    )};
+    state.subResult=null; state.subMode=false; state.editingId=null; state.view='form'; mobilePanel='form'; render();
+  });
+  g("sub-update-btn")?.addEventListener("click",async()=>{
+    const sr=state.subResult; const r=state.selected; if(!sr||!r) return;
+    try {
+      await updateDoc(doc(db,'recipes',r.id),{components:sr.components,notes:sr.notes||r.notes||'',updatedAt:new Date().toISOString()});
+      state.selected={...r,components:sr.components,notes:sr.notes||r.notes||''};
+      state.recipes=state.recipes.map(rx=>rx.id===r.id?state.selected:rx);
+      state.subResult=null; state.subMode=false;
+      state.successMsg='Recipe updated with substitutions!'; render();
+      setTimeout(()=>{state.successMsg=null;render();},3000);
+    } catch(e){ state.subError='Update failed: '+e.message; render(); }
+  });
+  on(".sub-ing-item","click",e=>{ toggleSubIngredient(e.currentTarget.dataset.ing); });
+  // Find image button in form
+  g("find-img-btn")?.addEventListener("click",async()=>{
+    const btn=g("find-img-btn"); const titleEl=g("f-title");
+    const title=titleEl?.value||state.form.title; if(!title) return;
+    btn.disabled=true; btn.textContent='🔍 Searching…';
+    const url=await fetchRecipeImage(title);
+    btn.disabled=false; btn.textContent='🔍 Find Image';
+    if(url){ const inp=g("f-imageurl"); if(inp) inp.value=url; state.form.imageUrl=url; render(); }
+    else { btn.textContent='Not found'; setTimeout(()=>{ btn.textContent='🔍 Find Image'; },2000); }
+  });
   g("refine-btn")?.addEventListener("click",()=>{
     const r = state.selected; if (!r) return;
     const comps = Array.isArray(r.components) ? r.components : [];
