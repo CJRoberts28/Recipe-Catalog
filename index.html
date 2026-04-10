@@ -137,6 +137,21 @@
     .sub-find-btn { flex:1; background:var(--accent); border:none; color:#faf7f2; padding:9px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:14px; font-style:italic; cursor:pointer; }
     .sub-find-btn:disabled { opacity:.5; cursor:default; }
     .sub-cancel-btn { background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:3px; padding:9px 12px; font-size:13px; cursor:pointer; }
+    .sub-suggestions { margin:12px 0 4px; }
+    .sub-sug-label { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px; }
+    .sub-sug-group { margin-bottom:12px; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:3px; }
+    .sub-sug-ingredient { font-size:12px; color:var(--text-muted); margin-bottom:8px; }
+    .sub-sug-ingredient strong { color:var(--text); font-size:13px; }
+    .sub-sug-option { display:flex; align-items:baseline; gap:8px; padding:6px 0; cursor:pointer; font-size:14px; color:var(--text); line-height:1.4; }
+    .sub-sug-option:not(:last-child) { border-bottom:1px solid var(--border); }
+    .sub-sug-option input[type=radio] { flex-shrink:0; margin-top:2px; accent-color:var(--accent); }
+    .sub-sug-name { font-weight:600; }
+    .sub-sug-note { font-size:12px; color:var(--text-muted); font-style:italic; }
+    .sub-other-input { border:1px solid var(--border); border-radius:3px; padding:3px 8px; font-size:13px; font-family:'Lora',serif; color:var(--text); width:150px; outline:none; display:none; }
+    .sub-other-input:focus { border-color:var(--accent-light); }
+    .sub-make-btn { width:100%; background:var(--accent); border:none; color:#faf7f2; padding:10px; border-radius:3px; font-family:'Playfair Display',serif; font-size:14px; font-style:italic; cursor:pointer; margin-top:4px; }
+    .sub-make-btn:disabled { opacity:.5; cursor:default; }
+    .sub-back-btn { background:none; border:none; color:var(--accent); font-size:13px; cursor:pointer; padding:6px 0; font-family:'Lora',serif; }
     .sub-result-panel { margin:20px 0; border:2px solid var(--accent-light); border-radius:4px; padding:16px 18px; background:var(--surface); }
     .sub-result-label { font-family:'Playfair Display',serif; font-size:13px; font-style:italic; color:var(--accent); margin-bottom:12px; }
     .sub-result-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
@@ -346,7 +361,7 @@ let state = {
   timers: [],
   scaledServings: null,
   importPanel: false, importText: "", importLoading: false, importError: null,
-  subMode: false, subSelected: [], subResult: null, subLoading: false, subError: null
+  subMode: false, subSelected: [], subSuggestions: null, subChosen: {}, subResult: null, subLoading: false, subError: null
 };
 let timerIdCounter = 0;
 
@@ -668,16 +683,48 @@ function toggleSubIngredient(ing) {
   render();
 }
 
-async function findSubstitutions() {
+async function getSuggestions() {
   const r = state.selected;
   if (!r || state.subSelected.length === 0) return;
   state.subLoading = true; state.subError = null; render();
-  const recipeJson = JSON.stringify({ title: r.title, category: r.category,
-    cook_time: r.cook_time, servings: r.servings, components: r.components }, null, 2);
-  const systemPrompt = `You are a recipe assistant helping adapt recipes based on available ingredients.
-The user doesn't have certain ingredients. Suggest practical substitutions and output the COMPLETE modified recipe as JSON inside <recipe> tags using the same schema.
-Only change what's needed. Add a brief explanation in the "notes" field describing the substitutions made.`;
-  const userMsg = `Recipe:\n${recipeJson}\n\nIngredients I don't have: ${state.subSelected.join(', ')}\n\nPlease substitute these and update the recipe accordingly.`;
+  const systemPrompt = `You are a recipe assistant. For each missing ingredient, suggest 2-3 practical, commonly available substitutes.
+Output ONLY a JSON array inside <suggestions> tags — no other text:
+<suggestions>
+[{"ingredient":"original ingredient string","alternatives":[{"name":"substitute","note":"one short phrase why it works"}]}]
+</suggestions>`;
+  const userMsg = `Recipe: "${r.title}"\nMissing: ${state.subSelected.join(', ')}\nSuggest substitutes.`;
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({ system: systemPrompt, messages: [{ role: "user", content: userMsg }] })
+    });
+    if (!res.ok) throw new Error("Request failed");
+    const data = await res.json();
+    const text = data.content?.[0]?.text || "";
+    const match = text.match(/<suggestions>([\s\S]*?)<\/suggestions>/);
+    if (!match) throw new Error("Could not parse suggestions");
+    state.subSuggestions = JSON.parse(match[1].trim());
+    state.subMode = false; state.subLoading = false;
+    render();
+  } catch(e) {
+    state.subLoading = false;
+    state.subError = e.message || "Something went wrong. Try again.";
+    render();
+  }
+}
+
+async function makeSubstitutedRecipe(choices) {
+  const r = state.selected;
+  state.subLoading = true; state.subError = null; render();
+  const substitutions = Object.entries(choices).map(([orig, sub]) => `• ${orig} → ${sub}`).join('\n');
+  const recipeJson = JSON.stringify({ title: r.title, components: r.components,
+    cook_time: r.cook_time, servings: r.servings }, null, 2);
+  const systemPrompt = `You are a recipe assistant. Adapt the recipe using the specified substitutions.
+Output the COMPLETE modified recipe as JSON inside <recipe> tags using the same schema.
+Add a brief note in the "notes" field explaining what was substituted and why it works.`;
+  const userMsg = `Recipe:\n${recipeJson}\n\nSubstitutions:\n${substitutions}\n\nAdapt the recipe.`;
   try {
     const idToken = await auth.currentUser.getIdToken();
     const res = await fetch(ANTHROPIC_API, {
@@ -692,9 +739,8 @@ Only change what's needed. Add a brief explanation in the "notes" field describi
     if (!match) throw new Error("No recipe found in response");
     const parsed = JSON.parse(match[1].trim());
     if (!parsed?.components) throw new Error("Invalid response");
-    state.subResult = parsed;
-    state.subLoading = false; state.subMode = false;
-    render();
+    state.subResult = parsed; state.subSuggestions = null;
+    state.subLoading = false; render();
   } catch(e) {
     state.subLoading = false;
     state.subError = e.message || "Something went wrong. Try again.";
@@ -1301,7 +1347,29 @@ function renderDetail(r, {readOnly=false}={}) {
     </div>` : ''}
     ${r.notes?`<div class="notes-block">${esc(r.notes)}</div>`:''}
     ${r.imageUrl ? `<div class="recipe-image-wrap"><img class="recipe-image" src="${esc(r.imageUrl)}" alt="${esc(r.title)}" onerror="this.parentElement.style.display='none'"></div>` : ''}
-    ${!readOnly && state.subMode ? `<div style="font-size:12px;color:var(--accent);font-style:italic;margin:8px 0 4px;">Tap the ingredients you don't have, then click Substitute.</div>` : ''}
+    ${!readOnly && state.subMode ? `<div style="font-size:12px;color:var(--accent);font-style:italic;margin:8px 0 4px;">Tap the ingredients you don't have, then click Get Alternatives.</div>` : ''}
+    ${!readOnly && state.subSuggestions ? `<div class="sub-suggestions">
+      <div class="sub-sug-label">Choose what you have instead:</div>
+      ${state.subSuggestions.map((sug,si)=>`
+        <div class="sub-sug-group">
+          <div class="sub-sug-ingredient">Instead of: <strong>${esc(sug.ingredient)}</strong></div>
+          ${(sug.alternatives||[]).map(alt=>`
+            <label class="sub-sug-option">
+              <input type="radio" name="sub_${si}" value="${esc(alt.name)}">
+              <span><span class="sub-sug-name">${esc(alt.name)}</span> <span class="sub-sug-note">— ${esc(alt.note)}</span></span>
+            </label>`).join('')}
+          <label class="sub-sug-option">
+            <input type="radio" name="sub_${si}" value="__other__">
+            <span style="color:var(--text-muted);font-style:italic;font-size:13px;">I have something else:</span>
+            <input type="text" class="sub-other-input" data-si="${si}" placeholder="what do you have?">
+          </label>
+        </div>`).join('')}
+      ${state.subError ? `<div class="import-error">⚠ ${esc(state.subError)}</div>` : ''}
+      <button class="sub-make-btn" id="sub-make-btn" ${state.subLoading?'disabled':''}>
+        ${state.subLoading?'Adapting recipe…':'✦ Make the Recipe'}
+      </button>
+      <button class="sub-back-btn" id="sub-back-btn">← Choose different ingredients</button>
+    </div>` : ''}
     ${!readOnly && state.subResult ? `<div class="sub-result-panel">
       <div class="sub-result-label">✦ Adapted recipe — review the substitutions below:</div>
       ${state.subResult.notes ? `<div class="notes-block" style="margin-bottom:14px;">${esc(state.subResult.notes)}</div>` : ''}
@@ -1343,7 +1411,7 @@ function renderDetail(r, {readOnly=false}={}) {
     ${!readOnly && state.subMode ? `<div class="sub-bar">
       ${state.subError ? `<span style="font-size:11px;color:var(--red);font-style:italic;flex:1;">${esc(state.subError)}</span>` : ''}
       <button class="sub-find-btn" id="sub-find-btn" ${state.subLoading||state.subSelected.length===0?'disabled':''}>
-        ${state.subLoading ? 'Finding alternatives…' : `✦ Substitute ${state.subSelected.length} ingredient${state.subSelected.length!==1?'s':''}`}
+        ${state.subLoading ? 'Loading…' : `✦ Get Alternatives (${state.subSelected.length})`}
       </button>
       <button class="sub-cancel-btn" id="sub-cancel-btn">Cancel</button>
     </div>` : ''}
@@ -1457,7 +1525,7 @@ function bindEvents() {
   on(".filter-btn","click",e=>{state.category=e.currentTarget.dataset.cat;render();});
   on(".recipe-item","click",e=>{
     const r=state.recipes.find(r=>r.id===e.currentTarget.dataset.id);
-    if(r){state.selected=r;state.view="detail";state.successMsg=null;state.scaledServings=null;state.subMode=false;state.subSelected=[];state.subResult=null;mobilePanel="detail";history.pushState({view:"detail",recipeId:r.id},'');render();}
+    if(r){state.selected=r;state.view="detail";state.successMsg=null;state.scaledServings=null;state.subMode=false;state.subSelected=[];state.subSuggestions=null;state.subResult=null;mobilePanel="detail";history.pushState({view:"detail",recipeId:r.id},'');render();}
   });
   g("add-btn")?.addEventListener("click",()=>{ startAdd(); mobilePanel="form"; });
   g("chat-btn")?.addEventListener("click",()=>{state.showChat=!state.showChat;render();});
@@ -1490,10 +1558,31 @@ function bindEvents() {
   g("print-btn")?.addEventListener("click",()=>window.print());
   // Substitutions
   g("sub-btn")?.addEventListener("click",()=>{
-    state.subMode=!state.subMode; state.subSelected=[]; state.subResult=null; state.subError=null; render();
+    state.subMode=!state.subMode; state.subSelected=[]; state.subSuggestions=null; state.subResult=null; state.subError=null; render();
   });
-  g("sub-find-btn")?.addEventListener("click",()=>findSubstitutions());
-  g("sub-cancel-btn")?.addEventListener("click",()=>{ state.subMode=false; state.subSelected=[]; state.subError=null; render(); });
+  g("sub-find-btn")?.addEventListener("click",()=>getSuggestions());
+  g("sub-cancel-btn")?.addEventListener("click",()=>{ state.subMode=false; state.subSelected=[]; state.subSuggestions=null; state.subError=null; render(); });
+  g("sub-back-btn")?.addEventListener("click",()=>{ state.subSuggestions=null; state.subMode=true; state.subError=null; render(); });
+  g("sub-make-btn")?.addEventListener("click",()=>{
+    const choices = {};
+    (state.subSuggestions||[]).forEach((sug,si)=>{
+      const sel = document.querySelector(`input[name="sub_${si}"]:checked`);
+      if (!sel) return;
+      if (sel.value === '__other__') {
+        const val = document.querySelector(`.sub-other-input[data-si="${si}"]`)?.value?.trim();
+        if (val) choices[sug.ingredient] = val;
+      } else {
+        choices[sug.ingredient] = sel.value;
+      }
+    });
+    if (Object.keys(choices).length === 0) { state.subError = "Select at least one substitute above."; render(); return; }
+    makeSubstitutedRecipe(choices);
+  });
+  on('input[name^="sub_"]','change',e=>{
+    const si = e.target.name.replace('sub_','');
+    const inp = document.querySelector(`.sub-other-input[data-si="${si}"]`);
+    if (inp) inp.style.display = e.target.value==='__other__'?'inline-block':'none';
+  });
   g("sub-dismiss-btn")?.addEventListener("click",()=>{ state.subResult=null; render(); });
   g("sub-save-new-btn")?.addEventListener("click",()=>{
     const sr=state.subResult; if(!sr) return;
