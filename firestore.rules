@@ -4,8 +4,11 @@ service cloud.firestore {
 
     function isWhitelisted() {
       return request.auth != null &&
-        exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)) &&
-        get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.active == true;
+        request.auth.token.email in [
+          'c.jonesroberts@gmail.com',
+          'gischris28@gmail.com',
+          'l.robertsmlt@gmail.com'
+        ];
     }
 
     // Recipe catalog — full access for both users
