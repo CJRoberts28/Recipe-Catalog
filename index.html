@@ -69,6 +69,17 @@
     .pantry-add-row input { flex:1; background:#fff; border:1px solid var(--border); border-radius:3px; color:var(--text); padding:5px 8px; font-family:'Lora',serif; font-size:13px; outline:none; min-width:0; }
     .pantry-add-row input:focus { border-color:var(--accent-light); }
     .pantry-add-row button { background:var(--accent); border:none; color:#faf7f2; border-radius:3px; padding:5px 10px; font-size:13px; cursor:pointer; }
+    .import-btn { margin:0 16px 10px; background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; transition:all 0.2s; text-align:left; width:calc(100% - 32px); }
+    .import-btn:hover, .import-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-pale); }
+    .import-panel { margin:0 16px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:10px 12px; }
+    .import-panel-label { font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+    .import-panel textarea { width:100%; box-sizing:border-box; background:#fff; border:1px solid var(--border); border-radius:3px; color:var(--text); padding:8px; font-family:'Lora',serif; font-size:12px; line-height:1.5; resize:vertical; min-height:90px; outline:none; }
+    .import-panel textarea:focus { border-color:var(--accent-light); }
+    .import-panel-actions { display:flex; gap:6px; margin-top:8px; }
+    .import-parse-btn { flex:1; background:var(--accent); border:none; color:#faf7f2; border-radius:3px; padding:6px 10px; font-family:'Playfair Display',serif; font-size:12px; font-style:italic; cursor:pointer; }
+    .import-parse-btn:disabled { opacity:.5; cursor:default; }
+    .import-cancel-btn { background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:3px; padding:6px 10px; font-size:12px; cursor:pointer; }
+    .import-error { font-size:11px; color:var(--red); margin-top:6px; font-style:italic; }
     .search-wrap { padding:10px 16px; border-bottom:1px solid var(--border); }
     .search-wrap input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:3px; color:var(--text); padding:7px 10px; font-family:'Lora',serif; font-size:14px; outline:none; transition:border-color 0.2s; }
     .search-wrap input:focus { border-color:var(--accent-light); background:#fff; }
@@ -315,7 +326,8 @@ let state = {
   notifPanel: false, notifSettings: null, notifPermission: null, fcmToken: null,
   pantry: [], pantryPanel: false,
   timers: [],
-  scaledServings: null
+  scaledServings: null,
+  importPanel: false, importText: "", importLoading: false, importError: null
 };
 let timerIdCounter = 0;
 
@@ -609,6 +621,72 @@ function renderPantryPanel() {
     </div>
     ${state.pantry.length ? `<button id="pantry-ask-btn" style="width:100%;margin-top:8px;background:var(--accent);border:none;color:#faf7f2;padding:6px 10px;border-radius:3px;font-family:'Playfair Display',serif;font-size:12px;font-style:italic;cursor:pointer;">✦ What can I make with this?</button>` : ''}
   </div>`;
+}
+
+function renderImportPanel() {
+  if (!state.importPanel) return '';
+  return `<div class="import-panel">
+    <div class="import-panel-label">⬇ Import from Claude</div>
+    <textarea id="import-textarea" placeholder="Paste recipe text from Claude or anywhere else…">${esc(state.importText)}</textarea>
+    ${state.importError ? `<div class="import-error">⚠ ${esc(state.importError)}</div>` : ''}
+    <div class="import-panel-actions">
+      <button class="import-parse-btn" id="import-parse-btn" ${state.importLoading ? 'disabled' : ''}>${state.importLoading ? 'Parsing…' : '✦ Parse & Load'}</button>
+      <button class="import-cancel-btn" id="import-cancel-btn">Cancel</button>
+    </div>
+  </div>`;
+}
+
+async function importRecipeFromText(text) {
+  if (!text.trim()) return;
+  state.importLoading = true; state.importError = null; render();
+  const systemPrompt = `You are a recipe extractor. The user will paste recipe text from any source. Extract the recipe and output it as valid JSON inside a <recipe> tag with this exact schema — nothing else, no commentary:
+<recipe>
+{
+  "title": "Recipe Name",
+  "category": "Dinner",
+  "rating": 5,
+  "favorite": false,
+  "cook_time": 30,
+  "servings": 4,
+  "imageUrl": null,
+  "tags": ["tag1"],
+  "date": "${todayStr()}",
+  "notes": "",
+  "components": [
+    {
+      "name": "",
+      "ingredients": ["2 cups flour", "1 tsp salt"],
+      "steps": ["Mix ingredients.", "Bake at 350°F for 30 minutes."]
+    }
+  ]
+}
+</recipe>
+Format ingredients as "amount unit ingredient". Split into multiple components if the recipe has distinct sections (e.g. sauce, dough, filling).`;
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({ system: systemPrompt, messages: [{ role: "user", content: text }] })
+    });
+    if (!res.ok) throw new Error("Parse request failed");
+    const data = await res.json();
+    const responseText = data.content?.[0]?.text || "";
+    const match = responseText.match(/<recipe>([\s\S]*?)<\/recipe>/);
+    if (!match) throw new Error("Could not extract recipe from response");
+    const parsed = JSON.parse(match[1].trim());
+    if (!parsed?.title || !Array.isArray(parsed?.components)) throw new Error("Invalid recipe structure");
+    state.pendingRecipe = parsed;
+    state.importPanel = false; state.importText = ""; state.importLoading = false;
+    loadRecipeFromChat();
+    mobilePanel = "form";
+    render();
+  } catch(e) {
+    state.importLoading = false;
+    state.importError = e.message || "Something went wrong. Try again.";
+    render();
+  }
 }
 
 function renderNotifPanel() {
@@ -1038,6 +1116,8 @@ function render() {
       ${renderNotifPanel()}
       <button class="add-btn" id="add-btn">+ Add a Recipe</button>
       <button class="chat-btn" id="chat-btn">✦ Ask Claude for Ideas</button>
+      <button class="import-btn${state.importPanel?' active':''}" id="import-btn">⬇ Import a Recipe</button>
+      ${renderImportPanel()}
       <button class="pantry-btn${state.pantryPanel?' active':''}" id="pantry-btn">🥕 My Pantry${state.pantry.length?` (${state.pantry.length})`:''}</button>
       ${renderPantryPanel()}
       <div class="search-wrap">
@@ -1258,6 +1338,13 @@ function bindEvents() {
   });
   g("add-btn")?.addEventListener("click",()=>{ startAdd(); mobilePanel="form"; });
   g("chat-btn")?.addEventListener("click",()=>{state.showChat=!state.showChat;render();});
+  g("import-btn")?.addEventListener("click",()=>{ state.importPanel=!state.importPanel; state.importError=null; render(); });
+  g("import-cancel-btn")?.addEventListener("click",()=>{ state.importPanel=false; state.importText=""; state.importError=null; render(); });
+  g("import-parse-btn")?.addEventListener("click",()=>{
+    const ta=document.getElementById("import-textarea");
+    if(ta) state.importText=ta.value;
+    importRecipeFromText(state.importText);
+  });
   g("pantry-btn")?.addEventListener("click",()=>{state.pantryPanel=!state.pantryPanel;render();});
   g("pantry-add-btn")?.addEventListener("click",()=>{
     const inp=g("pantry-input"); if(!inp) return;
