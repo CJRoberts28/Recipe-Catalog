@@ -36,5 +36,11 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.email == email;
       allow write: if false;
     }
+
+    // Public shared recipe links — readable by anyone, writable only by app users
+    match /sharedLinks/{token} {
+      allow read: if true;
+      allow create, update, delete: if isWhitelisted();
+    }
   }
 }
