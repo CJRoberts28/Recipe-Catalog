@@ -26,6 +26,7 @@
       "SETUP.md",
       "firestore.rules",
       "functions/**",
+      "docs/**",
       ".github/**"
     ],
     "rewrites": [
