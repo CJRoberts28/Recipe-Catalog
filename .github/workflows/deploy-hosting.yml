@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - index.html
+      - favicon.svg
+      - config.example.js
+      - firebase.json
 
 jobs:
   deploy:
