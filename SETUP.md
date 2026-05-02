@@ -139,7 +139,7 @@ Repeat for each user.
 
 ### 15. Set up GitHub Actions auto-deploy (optional)
 
-This repo includes workflows that automatically deploy when you push to `main`.
+You can configure GitHub Actions to automatically deploy to Firebase when you push to `main`.
 
 1. Generate a Firebase CI token:
    ```bash
@@ -151,7 +151,7 @@ This repo includes workflows that automatically deploy when you push to `main`.
    - Add a **Secret**: `FIREBASE_TOKEN` = (paste the token)
    - Add a **Variable**: `FIREBASE_PROJECT_ID` = your Firebase project ID
 
-From now on, pushing to `main` will automatically deploy hosting, functions (when `functions/**` changes), and Firestore rules (when `firestore.rules` changes).
+3. Create `.github/workflows/firebase-deploy.yml` with a workflow that runs `firebase deploy` on push to `main`. The Firebase CLI docs have a ready-made example.
 
 ### 16. Customize app branding
 

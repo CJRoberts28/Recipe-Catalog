@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isWhitelisted() {
+      return request.auth != null &&
+        request.auth.token.email in [
+          // Add your users' Google account email addresses here (see SETUP.md step 6)
+          // 'you@gmail.com',
+          // 'partner@gmail.com'
+        ];
+    }
+
+    // Recipe catalog — full access for whitelisted users
+    match /recipes/{recipeId} {
+      allow read, write: if isWhitelisted();
+    }
+
+    // Shared notification schedule config
+    match /settings/notifications {
+      allow read, write: if isWhitelisted();
+    }
+
+    // FCM tokens — each user can only manage their own token
+    match /fcm_tokens/{uid} {
+      allow read, write, delete: if isWhitelisted() && request.auth.uid == uid;
+    }
+
+    // Pantry — shared between all users
+    match /pantry/{docId} {
+      allow read, write: if isWhitelisted();
+    }
+
+    // Access control — managed manually in Firebase Console
+    match /allowedUsers/{email} {
+      allow read: if request.auth != null && request.auth.token.email == email;
+      allow write: if false;
+    }
+
+    // Public shared recipe links — individual docs readable by anyone, collection listing restricted
+    match /sharedLinks/{token} {
+      allow get: if true;
+      allow list: if isWhitelisted();
+      allow create, update, delete: if isWhitelisted();
+    }
+  }
+}

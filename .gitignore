@@ -1,3 +1,4 @@
 config.js
+.firebaserc
 node_modules/
 .env
