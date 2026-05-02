@@ -297,52 +297,101 @@
       .recipe-title { font-size:24px; }
       .component { break-inside:avoid; }
     }
+
+    /* ── Import Modal ─────────────────────────────────────────── */
+    .import-modal-backdrop { position:fixed; inset:0; background:rgba(44,31,14,0.45); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .import-modal { background:var(--surface); border:1px solid var(--border); border-radius:4px; width:100%; max-width:520px; padding:24px; box-shadow:0 8px 32px rgba(44,31,14,0.18); }
+    .import-modal h3 { font-family:'Playfair Display',serif; font-style:italic; font-size:18px; color:var(--accent); margin:0 0 4px; }
+    .import-modal p { font-family:'Lora',serif; font-size:13px; color:var(--text-muted); margin:0 0 14px; }
+    .import-modal textarea { width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:3px; color:var(--text); padding:10px; font-family:'Lora',serif; font-size:13px; line-height:1.5; resize:vertical; min-height:140px; outline:none; }
+    .import-modal textarea:focus { border-color:var(--accent-light); }
+    .import-modal-actions { display:flex; gap:8px; margin-top:10px; }
+    .import-modal-parse { flex:1; background:var(--accent); border:none; color:#faf7f2; border-radius:3px; padding:8px 14px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; }
+    .import-modal-parse:disabled { opacity:.5; cursor:default; }
+    .import-modal-cancel { background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:3px; padding:8px 14px; font-family:'Lora',serif; font-size:13px; cursor:pointer; }
+    .form-import-btn { background:none; border:none; color:var(--accent-light); font-family:'Lora',serif; font-size:13px; cursor:pointer; padding:0; text-decoration:underline; }
+    .form-import-btn:hover { color:var(--accent); }
+    /* ── Proposal Cards ────────────────────────────────────────── */
+    .proposal-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin:14px 0 6px; }
+    .proposal-card { border:1px solid var(--border); border-radius:4px; overflow:hidden; background:var(--surface); transition:border-color 0.2s; }
+    .proposal-card.accepted { border-color:var(--green); }
+    .proposal-card.rejected { border-color:var(--accent-light); }
+    .recipe-modal-backdrop { position:fixed; inset:0; background:rgba(44,31,14,0.5); z-index:600; display:flex; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; }
+    .recipe-modal { background:var(--surface); border:1px solid var(--border); border-radius:4px; width:100%; max-width:680px; padding:24px 28px; position:relative; }
+    .recipe-modal-close { position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; color:var(--text-dim); cursor:pointer; line-height:1; }
+    .recipe-modal-close:hover { color:var(--text-muted); }
+    .proposal-card-img { width:100%; height:120px; object-fit:cover; background:var(--surface2); display:block; }
+    .proposal-card-img-placeholder { width:100%; height:120px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:32px; }
+    .proposal-card-body { padding:10px 12px 6px; }
+    .proposal-card-day { font-family:'Lora',serif; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:2px; }
+    .proposal-card-meal { font-family:'Playfair Display',serif; font-size:15px; color:var(--text); margin-bottom:4px; line-height:1.3; }
+    .proposal-card-link { font-family:'Lora',serif; font-size:12px; color:var(--accent); cursor:pointer; text-decoration:underline; margin-bottom:6px; display:inline-block; }
+    .proposal-card-btns { display:flex; gap:6px; padding:0 12px 10px; }
+    .proposal-accept { flex:1; background:var(--green); border:none; color:#fff; border-radius:3px; padding:6px 8px; font-family:'Lora',serif; font-size:12px; cursor:pointer; transition:opacity .15s; }
+    .proposal-accept:hover { opacity:.85; }
+    .proposal-accept.lit { opacity:1; }
+    .proposal-reject { flex:1; background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:3px; padding:6px 8px; font-family:'Lora',serif; font-size:12px; cursor:pointer; }
+    .proposal-reject:hover { border-color:var(--red); color:var(--red); }
+    .proposal-feedback { padding:0 12px 10px; display:flex; gap:6px; }
+    .proposal-feedback input { flex:1; padding:5px 8px; border:1px solid var(--border); border-radius:3px; font-family:'Lora',serif; font-size:12px; background:var(--surface2); color:var(--text); outline:none; }
+    .proposal-feedback input:focus { border-color:var(--accent-light); }
+    .proposal-feedback-send { background:var(--accent); border:none; color:#fff; border-radius:3px; padding:5px 10px; font-family:'Lora',serif; font-size:12px; cursor:pointer; }
+    .proposal-hint { font-family:'Lora',serif; font-size:12px; color:var(--text-muted); font-style:italic; text-align:center; padding:4px 0 10px; }
+    @media (max-width:767px) { .proposal-cards { grid-template-columns:1fr; } }
+    /* ── Meal Planner ──────────────────────────────────────────── */
+    .plan-btn { margin:0 16px 4px; background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:3px; font-family:'Playfair Display',serif; font-size:13px; font-style:italic; cursor:pointer; transition:all 0.2s; text-align:left; width:calc(100% - 32px); display:block; }
+    .plan-btn:hover, .plan-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-pale); }
+    .meal-plan-view { padding:24px 28px; display:flex; flex-direction:column; height:100%; box-sizing:border-box; }
+    .meal-plan-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px; }
+    .meal-plan-header h2 { font-family:'Playfair Display',serif; font-style:italic; font-size:22px; color:var(--accent); margin:0; }
+    .meal-plan-tabs { display:flex; gap:8px; margin-bottom:16px; }
+    .meal-plan-tab { background:none; border:1px solid var(--border); border-radius:3px; padding:5px 14px; font-family:'Lora',serif; font-size:13px; color:var(--text-muted); cursor:pointer; transition:all 0.15s; }
+    .meal-plan-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .meal-plan-tab:disabled { opacity:0.4; cursor:default; }
+    .meal-plan-chat { display:flex; flex-direction:column; flex:1; min-height:0; }
+    .meal-plan-messages { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:10px; }
+    .meal-plan-msg { padding:10px 14px; border-radius:3px; font-family:'Lora',serif; font-size:14px; line-height:1.55; max-width:90%; }
+    .meal-plan-msg.user { background:var(--accent); color:#fff; align-self:flex-end; }
+    .meal-plan-msg.assistant { background:var(--surface2); color:var(--text); align-self:flex-start; }
+    .meal-plan-input-row { display:flex; gap:8px; margin-top:10px; }
+    .meal-plan-input { flex:1; padding:9px 12px; border:1px solid var(--border); border-radius:3px; font-family:'Lora',serif; font-size:14px; background:var(--surface2); color:var(--text); resize:none; }
+    .meal-plan-send { padding:9px 16px; background:var(--accent); color:#fff; border:none; border-radius:3px; font-family:'Lora',serif; font-size:14px; cursor:pointer; flex-shrink:0; }
+    .meal-plan-send:disabled { opacity:0.5; cursor:default; }
+    .meal-plan-summary { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+    .meal-plan-day-card { flex:1; min-width:120px; border:1px solid var(--border); border-radius:4px; padding:10px 12px; background:var(--surface); }
+    .meal-plan-day-card .day-label { font-family:'Lora',serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:4px; }
+    .meal-plan-day-card .day-meal { font-family:'Playfair Display',serif; font-size:14px; color:var(--text); }
+    .meal-plan-day-card .day-link { font-family:'Lora',serif; font-size:12px; color:var(--accent); cursor:pointer; text-decoration:underline; }
+    .shopping-list { flex:1; overflow-y:auto; }
+    .shopping-day { margin-bottom:20px; }
+    .shopping-day-header { font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--accent); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .shopping-item { display:flex; align-items:center; gap:10px; padding:5px 0; font-family:'Lora',serif; font-size:14px; color:var(--text); }
+    .shopping-item input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); flex-shrink:0; cursor:pointer; }
+    .shopping-item.checked { color:var(--text-dim); text-decoration:line-through; }
+    .shopping-item.have-it { color:var(--green); }
+    .shopping-item.have-it::after { content:' ✓ in pantry'; font-size:11px; opacity:0.7; }
+    .meal-plan-clear { background:none; border:1px solid var(--border); border-radius:3px; padding:5px 12px; font-family:'Lora',serif; font-size:12px; color:var(--text-muted); cursor:pointer; }
+    .meal-plan-clear:hover { color:var(--red); border-color:var(--red); }
+    @media (max-width:767px) {
+      .meal-plan-view { padding:16px; }
+      .meal-plan-summary { flex-direction:column; }
+      .meal-plan-day-card { min-width:unset; }
+    }
   </style>
 </head>
 <body>
+<div id="demo-banner" style="background:#2563eb;color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-family:sans-serif;position:sticky;top:0;z-index:9999;">
+  📖 <strong>Demo Preview</strong> — This is a read-only example of the Recipe Catalog app.
+  <a href="https://github.com/CJRoberts28/Recipe-Catalog" style="color:#bfdbfe;text-decoration:underline;">Clone the repo</a> to set up your own private instance.
+</div>
 <div id="root"><div class="loading-screen">Loading...</div></div>
 
-<script src="config.js"></script>
-
-<!-- Firebase -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signOut, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getMessaging, getToken, onMessage }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-import { checkAllowed } from "./src/auth.js";
-
-const firebaseConfig = window.APP_CONFIG.firebase;
-
-const ANTHROPIC_API = window.APP_CONFIG.claudeProxyUrl;
-const VAPID_KEY = window.APP_CONFIG.vapidKey;
-const CATS = ["Dinner","Lunch","Breakfast","Snack","Dessert","Side"];
-document.title = window.APP_CONFIG.appName;
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const messaging = getMessaging(app);
-const provider = new GoogleAuthProvider();
+// Static demo — no Firebase, no Claude AI required
+const APP_NAME = "Recipe Catalog";
+document.title = APP_NAME + " – Demo";
 let swRegistration = null;
 let notifMessageUnsubscribe = null;
-
-// Cross-app SSO: if another app passed a custom token, sign in with it silently.
-// We store the promise so onAuthStateChanged can wait for it — otherwise the
-// listener fires immediately with null and shows the login screen mid-flight.
-const ctSignInReady = (async () => {
-  const params = new URLSearchParams(window.location.search);
-  const ct = params.get('ct');
-  if (ct) {
-    try { await signInWithCustomToken(auth, ct); } catch (e) { console.warn('Custom token sign-in failed', e); }
-    params.delete('ct');
-    const newUrl = [window.location.pathname, params.toString() ? '?' + params.toString() : ''].join('');
-    history.replaceState(null, '', newUrl);
-  }
-})();
 
 let state = {
   user: null, recipes: [], selected: null,
@@ -356,7 +405,10 @@ let state = {
   timers: [],
   scaledServings: null,
   importPanel: false, importText: "", importLoading: false, importError: null,
-  subMode: false, subSelected: [], subSuggestions: null, subChosen: {}, subResult: null, subLoading: false, subError: null
+  subMode: false, subSelected: [], subSuggestions: null, subChosen: {}, subResult: null, subLoading: false, subError: null,
+  mealPlanMessages: [], mealPlanLoading: false, mealPlan: null, mealPlanChecked: {}, mealPlanView: 'chat',
+  mealPlanProposal: null, mealPlanCardState: {}, mealPlanProposalImages: {},
+  recipeModal: null
 };
 let timerIdCounter = 0;
 
@@ -539,102 +591,23 @@ function formatStep(s, ingredients, scaleFactor=1) {
 
 // ── Auth ──────────────────────────────────────────────────
 async function signIn() {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const email = result.user.email;
-    if (!await checkAllowed(email, db)) {
-      await signOut(auth);
-      document.getElementById("login-error").textContent = `Sorry, ${email} doesn't have access. Make sure you're signed into the right Google account.`;
-      return;
-    }
-  } catch(e) {
-    document.getElementById("login-error").textContent = "Sign in failed: " + e.message;
-  }
 }
 
-handleShareLink().then(handled => {
-  if (handled) return;
-  ctSignInReady.then(() => onAuthStateChanged(auth, async (user) => {
-  if (user && await checkAllowed(user.email, db)) {
-    state.user = user;
-    await Promise.all([loadRecipes(), loadPantry()]);
-    initNotifications(); // intentionally non-blocking
-    // Handle deep links from notification clicks
-    const params = new URLSearchParams(window.location.search);
-    const notifRecipeId = params.get('recipeId');
-    const notifChat = params.get('chat');
-    if (notifRecipeId) {
-      const r = state.recipes.find(r => r.id === notifRecipeId);
-      if (r) { state.selected = r; state.view = 'detail'; mobilePanel = 'detail'; history.replaceState({ view: 'detail', recipeId: r.id }, ''); }
-      else { history.replaceState({ view: 'list' }, ''); }
-    } else if (notifChat) {
-      state.showChat = true;
-      mobilePanel = 'chat';
-      history.replaceState({ view: 'list' }, '');
-    } else {
-      history.replaceState({ view: 'list' }, '');
-    }
-    render();
-  } else {
-    state.user = null;
-    state.fcmToken = null;
-    state.notifSettings = null;
-    state.notifPanel = false;
-    if (notifMessageUnsubscribe) { notifMessageUnsubscribe(); notifMessageUnsubscribe = null; }
-    renderLogin();
-  }
-}));
-}); // end handleShareLink().then
+// Demo mode: skip auth, go straight to the app
+(async () => {
+  state.user = { displayName: 'Demo User', email: 'demo@example.com', photoURL: null };
+  await loadRecipes();
+  render();
+})(); // end handleShareLink().then
 
 // ── Notifications ─────────────────────────────────────────
-async function initNotifications() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-  state.notifPermission = Notification.permission;
-  try {
-    const snap = await getDoc(doc(db, 'settings', 'notifications'));
-    state.notifSettings = snap.exists() ? snap.data() : { enabled: false, hour: 17, lastSent: '' };
-    swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    if (Notification.permission === 'granted') await refreshFCMToken();
-    if (notifMessageUnsubscribe) notifMessageUnsubscribe();
-    notifMessageUnsubscribe = onMessage(messaging, payload => {
-      const { title, body } = payload.notification || {};
-      state.successMsg = body ? `${title}: ${body}` : title;
-      render();
-      setTimeout(() => { state.successMsg = null; render(); }, 8000);
-    });
-    render();
-  } catch(e) { console.warn('Notification init error:', e); }
-}
 
-async function refreshFCMToken() {
-  if (!swRegistration || !VAPID_KEY || VAPID_KEY === 'YOUR_VAPID_KEY_HERE') return;
-  try {
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
-    if (token && token !== state.fcmToken) {
-      state.fcmToken = token;
-      await setDoc(doc(db, 'fcm_tokens', state.user.uid), {
-        token, email: state.user.email, updatedAt: new Date().toISOString()
-      });
-      state.notifPermission = 'granted';
-    }
-  } catch(e) { console.warn('FCM token error:', e); }
-}
 
-async function requestNotifPermission() {
-  const perm = await Notification.requestPermission();
-  state.notifPermission = perm;
-  if (perm === 'granted') await refreshFCMToken();
-  render();
-}
 
-async function saveNotifSettings(enabled, hour) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const newSettings = { enabled, hour: parseInt(hour), lastSent: state.notifSettings?.lastSent || '', timezone };
-  state.notifSettings = newSettings; // update state immediately so UI doesn't revert
-  try {
-    await setDoc(doc(db, 'settings', 'notifications'), newSettings);
-  } catch(e) { console.warn('Save notif settings error:', e); }
-}
+
+
+
+
 
 function renderPantryPanel() {
   if (!state.pantryPanel) return '';
@@ -678,136 +651,26 @@ function toggleSubIngredient(ing) {
   render();
 }
 
-async function getSuggestions() {
-  const r = state.selected;
-  if (!r || state.subSelected.length === 0) return;
-  state.subLoading = true; state.subError = null; render();
-  const systemPrompt = `You are a recipe assistant. For each missing ingredient, suggest 2-3 practical, commonly available substitutes.
-Output ONLY a JSON array inside <suggestions> tags — no other text:
-<suggestions>
-[{"ingredient":"original ingredient string","alternatives":[{"name":"substitute","note":"one short phrase why it works"}]}]
-</suggestions>`;
-  const userMsg = `Recipe: "${r.title}"\nMissing: ${state.subSelected.join(', ')}\nSuggest substitutes.`;
-  try {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-      body: JSON.stringify({ system: systemPrompt, messages: [{ role: "user", content: userMsg }] })
-    });
-    if (!res.ok) throw new Error("Request failed");
-    const data = await res.json();
-    const text = data.content?.[0]?.text || "";
-    const match = text.match(/<suggestions>([\s\S]*?)<\/suggestions>/);
-    if (!match) throw new Error("Could not parse suggestions");
-    state.subSuggestions = JSON.parse(match[1].trim());
-    state.subMode = false; state.subLoading = false;
-    render();
-  } catch(e) {
-    state.subLoading = false;
-    state.subError = e.message || "Something went wrong. Try again.";
-    render();
-  }
-}
+async function getSuggestions() { return; }
 
-async function makeSubstitutedRecipe(choices) {
-  const r = state.selected;
-  state.subLoading = true; state.subError = null; render();
-  const substitutions = Object.entries(choices).map(([orig, sub]) => `• ${orig} → ${sub}`).join('\n');
-  const recipeJson = JSON.stringify({ title: r.title, components: r.components,
-    cook_time: r.cook_time, servings: r.servings }, null, 2);
-  const systemPrompt = `You are a recipe assistant. Adapt the recipe using the specified substitutions.
-Output the COMPLETE modified recipe as JSON inside <recipe> tags using the same schema.
-Add a brief note in the "notes" field explaining what was substituted and why it works.`;
-  const userMsg = `Recipe:\n${recipeJson}\n\nSubstitutions:\n${substitutions}\n\nAdapt the recipe.`;
-  try {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-      body: JSON.stringify({ system: systemPrompt, messages: [{ role: "user", content: userMsg }] })
-    });
-    if (!res.ok) throw new Error("Request failed");
-    const data = await res.json();
-    const text = data.content?.[0]?.text || "";
-    const match = text.match(/<recipe>([\s\S]*?)<\/recipe>/);
-    if (!match) throw new Error("No recipe found in response");
-    const parsed = JSON.parse(match[1].trim());
-    if (!parsed?.components) throw new Error("Invalid response");
-    state.subResult = parsed; state.subSuggestions = null;
-    state.subLoading = false; render();
-  } catch(e) {
-    state.subLoading = false;
-    state.subError = e.message || "Something went wrong. Try again.";
-    render();
-  }
-}
+async function makeSubstitutedRecipe() { return; }
 
-function renderImportPanel() {
-  if (!state.importPanel) return '';
-  return `<div class="import-panel">
-    <div class="import-panel-label">⬇ Import from Claude</div>
-    <textarea id="import-textarea" placeholder="Paste recipe text from Claude or anywhere else…">${esc(state.importText)}</textarea>
-    ${state.importError ? `<div class="import-error">⚠ ${esc(state.importError)}</div>` : ''}
-    <div class="import-panel-actions">
-      <button class="import-parse-btn" id="import-parse-btn" ${state.importLoading ? 'disabled' : ''}>${state.importLoading ? 'Parsing…' : '✦ Parse & Load'}</button>
-      <button class="import-cancel-btn" id="import-cancel-btn">Cancel</button>
+function renderImportModal() {
+  return `<div class="import-modal-backdrop" id="import-modal-backdrop">
+    <div class="import-modal">
+      <h3>⬇ Import a Recipe</h3>
+      <p>Paste recipe text from anywhere — Claude will extract the details and load them into the form.</p>
+      <textarea id="import-textarea" placeholder="Paste recipe text here…">${esc(state.importText)}</textarea>
+      ${state.importError ? `<div class="import-error" style="color:var(--red);font-size:13px;margin-top:6px;">⚠ ${esc(state.importError)}</div>` : ''}
+      <div class="import-modal-actions">
+        <button class="import-modal-parse" id="import-parse-btn" ${state.importLoading?'disabled':''}>${state.importLoading?'Parsing…':'✦ Parse & Load'}</button>
+        <button class="import-modal-cancel" id="import-cancel-btn">Cancel</button>
+      </div>
     </div>
   </div>`;
 }
 
-async function importRecipeFromText(text) {
-  if (!text.trim()) return;
-  state.importLoading = true; state.importError = null; render();
-  const systemPrompt = `You are a recipe extractor. The user will paste recipe text from any source. Extract the recipe and output it as valid JSON inside a <recipe> tag with this exact schema — nothing else, no commentary:
-<recipe>
-{
-  "title": "Recipe Name",
-  "category": "Dinner",
-  "rating": 5,
-  "favorite": false,
-  "cook_time": 30,
-  "servings": 4,
-  "imageUrl": null,
-  "tags": ["tag1"],
-  "date": "${todayStr()}",
-  "notes": "",
-  "components": [
-    {
-      "name": "",
-      "ingredients": ["2 cups flour", "1 tsp salt"],
-      "steps": ["Mix ingredients.", "Bake at 350°F for 30 minutes."]
-    }
-  ]
-}
-</recipe>
-Format ingredients as "amount unit ingredient". Split into multiple components if the recipe has distinct sections (e.g. sauce, dough, filling).`;
-
-  try {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-      body: JSON.stringify({ system: systemPrompt, messages: [{ role: "user", content: text }] })
-    });
-    if (!res.ok) throw new Error("Parse request failed");
-    const data = await res.json();
-    const responseText = data.content?.[0]?.text || "";
-    const match = responseText.match(/<recipe>([\s\S]*?)<\/recipe>/);
-    if (!match) throw new Error("Could not extract recipe from response");
-    const parsed = JSON.parse(match[1].trim());
-    if (!parsed?.title || !Array.isArray(parsed?.components)) throw new Error("Invalid recipe structure");
-    state.pendingRecipe = parsed;
-    state.importPanel = false; state.importText = ""; state.importLoading = false;
-    loadRecipeFromChat();
-    mobilePanel = "form";
-    render();
-  } catch(e) {
-    state.importLoading = false;
-    state.importError = e.message || "Something went wrong. Try again.";
-    render();
-  }
-}
+async function importRecipeFromText() { alert('Recipe import requires Claude AI. Clone the repo and set up your own instance!'); }
 
 function renderNotifPanel() {
   if (!state.notifPanel) return '';
@@ -839,253 +702,214 @@ function renderNotifPanel() {
 }
 
 // ── Firestore ─────────────────────────────────────────────
-async function loadRecipes() {
-  try {
-    const q = query(collection(db, "recipes"), orderBy("date", "desc"));
-    const snap = await getDocs(q);
-    state.recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) {
-    // If index not ready yet, load without sort
-    try {
-      const snap = await getDocs(collection(db, "recipes"));
-      state.recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch(e2) { console.error(e2); }
+async function initNotifications() { }
+
+
+const STATIC_RECIPES = [
+  {
+    id: 'demo-1',
+    title: 'Classic Spaghetti Carbonara',
+    category: 'Dinner',
+    rating: 5,
+    favorite: true,
+    cook_time: 25,
+    servings: 4,
+    imageUrl: null,
+    tags: ['pasta', 'italian', 'quick'],
+    date: '2024-03-15',
+    notes: 'The key is to remove the pan from heat before adding the egg mixture to avoid scrambling. Use fresh eggs and good quality Pecorino.',
+    components: [
+      {
+        name: '',
+        ingredients: ['400g spaghetti', '200g pancetta or guanciale', '4 large egg yolks', '1 whole egg', '100g Pecorino Romano, finely grated', '50g Parmesan, finely grated', 'Black pepper, freshly cracked', 'Salt for pasta water'],
+        steps: ['Bring a large pot of salted water to a boil and cook spaghetti until al dente.', 'While pasta cooks, fry pancetta in a large skillet over medium heat until crispy. Remove from heat.', 'In a bowl, whisk together egg yolks, whole egg, and most of the grated cheese. Season generously with black pepper.', 'Reserve 1 cup of pasta water, then drain the spaghetti.', 'Add hot pasta to the pancetta skillet (off heat). Toss to coat in the fat.', 'Pour egg mixture over pasta, tossing quickly and adding pasta water a splash at a time until creamy.', 'Serve immediately topped with remaining cheese and extra black pepper.']
+      }
+    ],
+    createdBy: 'demo@example.com',
+    updatedAt: '2024-03-15T18:00:00Z',
+    chefAlias: null
+  },
+  {
+    id: 'demo-2',
+    title: 'Fluffy Blueberry Pancakes',
+    category: 'Breakfast',
+    rating: 5,
+    favorite: false,
+    cook_time: 20,
+    servings: 4,
+    imageUrl: null,
+    tags: ['breakfast', 'weekend', 'family'],
+    date: '2024-02-10',
+    notes: 'Do not overmix the batter — lumps are okay and make the pancakes fluffier. Let the batter rest for 5 minutes before cooking.',
+    components: [
+      {
+        name: '',
+        ingredients: ['2 cups all-purpose flour', '2 tbsp sugar', '2 tsp baking powder', '1/2 tsp baking soda', '1/2 tsp salt', '2 cups buttermilk', '2 large eggs', '3 tbsp melted butter', '1 tsp vanilla extract', '1 cup fresh blueberries', 'Butter or oil for pan', 'Maple syrup to serve'],
+        steps: ['Whisk together flour, sugar, baking powder, baking soda, and salt in a large bowl.', 'In a separate bowl, whisk buttermilk, eggs, melted butter, and vanilla.', 'Pour wet ingredients into dry and stir gently until just combined — do not overmix.', 'Fold in blueberries. Let batter rest 5 minutes.', 'Heat a non-stick skillet or griddle over medium heat. Lightly butter.', 'Pour 1/4 cup batter per pancake. Cook until bubbles form on surface, about 2-3 minutes.', 'Flip and cook 1-2 minutes more until golden. Serve with maple syrup.']
+      }
+    ],
+    createdBy: 'demo@example.com',
+    updatedAt: '2024-02-10T09:00:00Z',
+    chefAlias: null
+  },
+  {
+    id: 'demo-3',
+    title: 'Chicken Caesar Salad',
+    category: 'Lunch',
+    rating: 4,
+    favorite: false,
+    cook_time: 20,
+    servings: 2,
+    imageUrl: null,
+    tags: ['salad', 'chicken', 'healthy', 'classic'],
+    date: '2024-01-22',
+    notes: 'Homemade dressing makes all the difference. The anchovies are optional but add great depth.',
+    components: [
+      {
+        name: 'Dressing',
+        ingredients: ['3 garlic cloves, minced', '2 anchovy fillets (optional)', '2 tbsp lemon juice', '1 tsp Dijon mustard', '1 tsp Worcestershire sauce', '1/2 cup mayonnaise', '1/4 cup Parmesan, grated', 'Salt and pepper to taste'],
+        steps: ['Mash anchovies and garlic into a paste.', 'Whisk in lemon juice, mustard, and Worcestershire.', 'Stir in mayonnaise and Parmesan. Season with salt and pepper.', 'Refrigerate until needed.']
+      },
+      {
+        name: 'Salad',
+        ingredients: ['2 chicken breasts', '1 large head romaine lettuce, chopped', '1 cup croutons', '1/2 cup Parmesan, shaved', 'Olive oil, salt, pepper for chicken'],
+        steps: ['Season chicken with olive oil, salt, and pepper. Grill or pan-sear 6-7 minutes per side until cooked through.', 'Rest chicken 5 minutes, then slice.', 'Toss romaine with enough dressing to coat lightly.', 'Top with chicken, croutons, and shaved Parmesan. Serve immediately.']
+      }
+    ],
+    createdBy: 'demo@example.com',
+    updatedAt: '2024-01-22T12:30:00Z',
+    chefAlias: null
+  },
+  {
+    id: 'demo-4',
+    title: 'Chocolate Chip Cookies',
+    category: 'Dessert',
+    rating: 5,
+    favorite: true,
+    cook_time: 45,
+    servings: 24,
+    imageUrl: null,
+    tags: ['baking', 'cookies', 'chocolate', 'classic'],
+    date: '2023-12-20',
+    notes: 'Brown the butter first for nutty depth. Chilling the dough overnight gives much better results. Use a mix of dark and semi-sweet chips.',
+    components: [
+      {
+        name: '',
+        ingredients: ['2 1/4 cups all-purpose flour', '1 tsp baking soda', '1 tsp salt', '1 cup (2 sticks) unsalted butter', '3/4 cup granulated sugar', '3/4 cup packed brown sugar', '2 large eggs', '2 tsp vanilla extract', '2 cups chocolate chips', 'Flaky sea salt for topping'],
+        steps: ['Brown butter in a saucepan over medium heat until nutty and golden. Let cool 15 minutes.', 'Whisk flour, baking soda, and salt in a bowl.', 'Beat browned butter with both sugars until combined. Add eggs one at a time, then vanilla.', 'Stir in flour mixture until just combined. Fold in chocolate chips.', 'Chill dough at least 1 hour (overnight is best).', 'Preheat oven to 375°F (190°C). Scoop dough into balls on parchment-lined baking sheets.', 'Bake 9-11 minutes until edges are set but centers still look slightly underdone.', 'Sprinkle with flaky salt immediately. Cool on pan 5 minutes before transferring.']
+      }
+    ],
+    createdBy: 'demo@example.com',
+    updatedAt: '2023-12-20T15:00:00Z',
+    chefAlias: null
+  },
+  {
+    id: 'demo-5',
+    title: 'Fresh Guacamole',
+    category: 'Snack',
+    rating: 4,
+    favorite: false,
+    cook_time: 10,
+    servings: 6,
+    imageUrl: null,
+    tags: ['dip', 'mexican', 'avocado', 'quick', 'vegan'],
+    date: '2024-04-05',
+    notes: 'Use ripe avocados — they should yield to gentle pressure. Do not over-mash; keep it chunky.',
+    components: [
+      {
+        name: '',
+        ingredients: ['3 ripe avocados', '1 lime, juiced', '1/2 tsp salt', '1/2 small white onion, finely diced', '2 Roma tomatoes, seeded and diced', '2 tbsp cilantro, chopped', '1 jalapeño, seeded and minced', '1 garlic clove, minced'],
+        steps: ['Halve and pit avocados. Scoop flesh into a bowl.', 'Add lime juice and salt. Mash with a fork to your preferred texture.', 'Fold in onion, tomatoes, cilantro, jalapeño, and garlic.', 'Taste and adjust salt and lime juice.', 'Serve immediately with tortilla chips, or press plastic wrap directly onto surface to store.']
+      }
+    ],
+    createdBy: 'demo@example.com',
+    updatedAt: '2024-04-05T16:00:00Z',
+    chefAlias: null
+  },
+  {
+    id: 'demo-6',
+    title: 'Honey-Garlic Roasted Vegetables',
+    category: 'Side',
+    rating: 4,
+    favorite: false,
+    cook_time: 35,
+    servings: 4,
+    imageUrl: null,
+    tags: ['vegetables', 'roasted', 'healthy', 'easy', 'vegan'],
+    date: '2024-03-28',
+    notes: 'Cut vegetables to similar sizes for even cooking. Do not crowd the pan or they will steam instead of roast.',
+    components: [
+      {
+        name: '',
+        ingredients: ['1 large sweet potato, cubed', '2 medium carrots, sliced', '1 head broccoli, cut into florets', '1 red bell pepper, chopped', '1 zucchini, sliced', '3 tbsp olive oil', '3 garlic cloves, minced', '2 tbsp honey', '1 tbsp soy sauce', '1 tsp smoked paprika', '1/2 tsp black pepper', '1/2 tsp salt', 'Fresh parsley to serve'],
+        steps: ['Preheat oven to 425°F (220°C).', 'Whisk together olive oil, garlic, honey, soy sauce, paprika, salt, and pepper.', 'Toss all vegetables in the glaze until well coated.', 'Spread in a single layer across two large baking sheets — do not crowd.', 'Roast 25-30 minutes, flipping halfway, until caramelized and tender.', 'Garnish with fresh parsley and serve.']
+      }
+    ],
+    createdBy: 'demo@example.com',
+    updatedAt: '2024-03-28T17:30:00Z',
+    chefAlias: null
   }
+];
+
+async function loadRecipes() {
+  state.recipes = STATIC_RECIPES;
 }
 
 // ── Pantry ────────────────────────────────────────────────
-async function loadPantry() {
-  try {
-    const snap = await getDoc(doc(db, 'pantry', 'items'));
-    state.pantry = snap.exists() ? (snap.data().items || []) : [];
-  } catch(e) { console.warn('Load pantry error:', e); }
-}
+async function loadPantry() { state.pantry = []; }
 
 async function addPantryItem(item) {
   const trimmed = item.trim();
   if (!trimmed || state.pantry.includes(trimmed)) return;
   state.pantry = [...state.pantry, trimmed];
-  try { await setDoc(doc(db, 'pantry', 'items'), { items: state.pantry }); }
-  catch(e) { console.warn('Save pantry error:', e); }
+  render();
 }
 
 async function removePantryItem(item) {
   state.pantry = state.pantry.filter(i => i !== item);
-  try { await setDoc(doc(db, 'pantry', 'items'), { items: state.pantry }); }
-  catch(e) { console.warn('Save pantry error:', e); }
+  render();
 }
 
 // ── Public Sharing ────────────────────────────────────────────────────────────
 async function createShareLink(r) {
-  const token = crypto.randomUUID();
-  await setDoc(doc(db, 'sharedLinks', token), {
-    recipeId: r.id || null, title: r.title, createdAt: new Date().toISOString(),
-    createdBy: state.user.email,
-    recipe: {
-      title: r.title, category: r.category, rating: r.rating, favorite: r.favorite,
-      cook_time: r.cook_time || null, servings: r.servings || null,
-      tags: r.tags || [], date: r.date, notes: r.notes,
-      components: r.components || [], chefAlias: r.chefAlias || null
-    }
-  });
-  return token;
+  // Demo mode: share links require Firebase. Return a placeholder token.
+  alert('Share links require a live Firebase instance. Clone the repo to enable sharing!');
+  return null;
 }
 
 function renderPublicRecipe(r) {
   document.getElementById('root').innerHTML = `
   <div style="max-width:760px;margin:0 auto;padding:36px 20px;">
     <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'Playfair Display',serif;font-size:13px;font-style:italic;color:var(--accent-light);">${window.APP_CONFIG.appName} — Shared Recipe</div>
+      <div style="font-family:'Playfair Display',serif;font-size:13px;font-style:italic;color:var(--accent-light);">Recipe Catalog — Shared Recipe</div>
     </div>
     ${renderDetail(r, {readOnly:true})}
     <div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--text-muted);font-style:italic;">
-      Shared from <a href="${window.APP_CONFIG.appDomain}/" style="color:var(--accent);">${window.APP_CONFIG.appName}</a>
+      Shared from <a href="https://github.com/CJRoberts28/Recipe-Catalog/" style="color:var(--accent);">Recipe Catalog</a>
     </div>
   </div>`;
 }
 
 async function handleShareLink() {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('share');
-  if (!token) return false;
-  document.getElementById('root').innerHTML = '<div class="loading-screen">Loading shared recipe…</div>';
-  try {
-    const snap = await getDoc(doc(db, 'sharedLinks', token));
-    if (!snap.exists()) {
-      document.getElementById('root').innerHTML = '<div class="loading-screen">This share link is invalid or has expired.</div>';
-    } else {
-      renderPublicRecipe(snap.data().recipe);
-    }
-  } catch(e) {
-    document.getElementById('root').innerHTML = `<div class="loading-screen">Could not load recipe: ${esc(e.message)}</div>`;
-  }
-  return true;
+  // Demo mode: no Firebase, share links not supported
+  return false;
 }
 
-async function saveRecipe() {
-  syncForm();
-  const f = state.form;
-  const payload = {
-    title: f.title, category: f.category, rating: parseInt(f.rating)||5,
-    favorite: f.favorite, cook_time: f.cook_time ? parseInt(f.cook_time) : null,
-    servings: f.servings ? parseInt(f.servings) : null,
-    imageUrl: f.imageUrl || null,
-    tags: f.tags ? f.tags.split(",").map(t=>t.trim()).filter(Boolean) : [],
-    date: f.date, notes: f.notes,
-    components: f.components.map(c=>({
-      name: c.name,
-      ingredients: c.ingredients.filter(Boolean),
-      steps: c.steps.filter(Boolean)
-    })),
-    createdBy: state.user.email,
-    updatedAt: new Date().toISOString(),
-    // Clear alias when title changes so it gets regenerated on next view
-    chefAlias: (state.editingId && state.selected?.title === f.title)
-      ? (state.selected?.chefAlias || null)
-      : null
-  };
-  const btn = document.getElementById("save-btn");
-  if(btn){btn.disabled=true;btn.textContent="Saving...";}
-  try {
-    if (state.editingId) {
-      await updateDoc(doc(db, "recipes", state.editingId), payload);
-      state.recipes = state.recipes.map(r => r.id===state.editingId ? {id:state.editingId,...payload} : r);
-      state.selected = {id:state.editingId,...payload};
-    } else {
-      const ref = await addDoc(collection(db, "recipes"), payload);
-      const newRecipe = {id:ref.id,...payload};
-      state.recipes.unshift(newRecipe);
-      state.selected = newRecipe;
-    }
-    state.view="detail"; state.successMsg="Recipe saved!"; mobilePanel="detail";
-    state.formError=null; state.editingId=null;
-  } catch(e) {
-    state.formError="Failed to save: "+e.message;
-    if(btn){btn.disabled=false;btn.textContent="Save Recipe";}
-  }
-  render();
+async function saveRecipe(data, id = null) {
+  alert('This is a read-only demo. Clone the repo to add your own recipes!');
 }
 
 async function deleteRecipe(id) {
-  if(!confirm("Delete this recipe?")) return;
-  try {
-    await deleteDoc(doc(db, "recipes", id));
-    state.recipes = state.recipes.filter(r=>r.id!==id);
-    state.selected=null; state.view="list";
-  } catch(e) { alert("Delete failed: "+e.message); }
-  render();
+  alert('This is a read-only demo. Clone the repo to manage recipes!');
 }
 
 // ── Chef Alias ─────────────────────────────────────────────
 let aliasPending = new Set(); // prevent duplicate in-flight requests
 
-async function generateChefAlias(recipe) {
-  if (aliasPending.has(recipe.id)) return;
-  aliasPending.add(recipe.id);
-  try {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-      body: JSON.stringify({
-        system: "You are a creative chef describing dishes in the style of Chopped or Top Chef contestants — confident, specific, and appetizing. Write in plain English with a few culinary terms where they naturally fit. Never use full French phrases or entire French titles. Respond with only the alias — no explanation, no punctuation at the end.",
-        messages: [{
-          role: "user",
-          content: `Give "${recipe.title}" a single chef-style alias that describes what it actually is — specific ingredients, cooking method, and a finishing touch. Think: "Pan-Seared Chicken Thighs with Roasted Garlic Pan Sauce and Crispy Capers" or "Brown Butter Honey Cake with Whipped Mascarpone and Candied Walnuts". One line only, no French titles.`
-        }]
-      })
-    });
-    const data = await res.json();
-    const alias = data.content?.[0]?.text?.trim();
-    if (alias) {
-      await updateDoc(doc(db, "recipes", recipe.id), { chefAlias: alias });
-      state.recipes = state.recipes.map(r => r.id === recipe.id ? {...r, chefAlias: alias} : r);
-      if (state.selected?.id === recipe.id) state.selected = {...state.selected, chefAlias: alias};
-      render();
-    }
-  } catch(e) { console.warn("Chef alias generation failed:", e); }
-  finally { aliasPending.delete(recipe.id); }
-}
+async function generateChefAlias() { return null; }
 
 
-async function sendChat(message) {
-  // Build user message content — may include an image
-  const userContent = state.chatImage
-    ? [
-        { type: "image", source: { type: "base64", media_type: state.chatImage.mediaType, data: state.chatImage.base64 } },
-        { type: "text", text: message || "What can you make with this?" }
-      ]
-    : message;
-  state.chatMessages.push({ role: "user", content: userContent, _imagePreview: state.chatImage?.previewUrl });
-  state.chatImage = null;
-  state.chatLoading = true;
-  state.pendingRecipe = null;
-  render();
-
-  const pantryLine = state.pantry.length
-    ? `\n\nCurrent pantry: ${state.pantry.join(', ')}.`
-    : '';
-  const systemPrompt = `You are a friendly cooking assistant for ${window.APP_CONFIG.ownerNames}. Help them come up with delicious recipes based on what they have or what they're in the mood for.${pantryLine}
-
-When suggesting a recipe, always format it as valid JSON at the end of your message inside a <recipe> tag, like this:
-<recipe>
-{
-  "title": "Recipe Name",
-  "category": "Dinner",
-  "rating": 5,
-  "favorite": false,
-  "cook_time": 30,
-  "tags": ["easy", "chicken"],
-  "date": "${todayStr()}",
-  "notes": "Any tips or observations",
-  "imageUrl": null,
-  "components": [
-    {
-      "name": "Component Name",
-      "ingredients": ["ingredient 1", "ingredient 2"],
-      "steps": ["step 1", "step 2"]
-    }
-  ]
-}
-</recipe>
-
-Keep the recipe JSON valid. Be warm, conversational, and enthusiastic about food. If they already have ingredients, use those. If they want something specific, deliver it with flair. For imageUrl, leave it null — the user will add their own image if desired.`;
-
-  try {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-      body: JSON.stringify({
-        system: systemPrompt,
-        messages: state.chatMessages.map(m => ({ role: m.role, content: m.content }))
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.[0]?.text || "Sorry, I couldn't generate a response.";
-    state.chatMessages.push({role:"assistant", content:text});
-
-    // Extract recipe JSON if present
-    const match = text.match(/<recipe>([\s\S]*?)<\/recipe>/);
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[1].trim());
-        if (parsed && typeof parsed.title === "string" && Array.isArray(parsed.components)) {
-          state.pendingRecipe = parsed;
-        }
-      } catch(e) { console.error("Recipe parse error", e); }
-    }
-  } catch(e) {
-    state.chatMessages.push({role:"assistant", content:"Sorry, I had trouble connecting. Please try again."});
-  }
-  state.chatLoading = false;
-  render();
-  // Scroll chat to bottom
-  setTimeout(()=>{
-    const el = document.getElementById("chat-messages");
-    if(el) el.scrollTop = el.scrollHeight;
-  }, 50);
-}
+async function sendChat() { return; }
 
 function loadRecipeFromChat() {
   if (!state.pendingRecipe) return;
@@ -1160,10 +984,10 @@ function renderLogin() {
   document.getElementById("root").innerHTML=`
   <div class="login-screen">
     <div class="login-card">
-      <div class="monogram">C&L</div>
-      <h1>${window.APP_CONFIG.appName}</h1>
+      <div class="monogram">RC</div>
+      <h1>Recipe Catalog</h1>
       <hr class="divider">
-      <p>${window.APP_CONFIG.ownerNames}'s private recipe catalog</p>
+      <p>Demo User's private recipe catalog</p>
       <button class="google-btn" id="google-signin-btn">
         <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Sign in with Google
@@ -1223,6 +1047,7 @@ function render() {
   // On mobile, sync mobilePanel with state.view
   if (mobile) {
     if (state.view === 'form') mobilePanel = 'form';
+    else if (state.view === 'mealplan') mobilePanel = 'detail';
     else if (state.view === 'detail' && state.selected) mobilePanel = 'detail';
     else if (state.showChat) mobilePanel = 'chat';
   }
@@ -1231,7 +1056,7 @@ function render() {
   <div class="app">
     <div class="sidebar${mobile && mobilePanel !== 'list' ? ' hidden' : ''}">
       <div class="sidebar-header">
-        <h1>🍽 ${window.APP_CONFIG.appName}</h1>
+        <h1>🍽 Recipe Catalog</h1>
         <div class="user-row">
           ${state.user.photoURL?`<img class="user-avatar" src="${esc(state.user.photoURL)}">`:''}
           <span class="user-name">${esc(state.user.displayName||state.user.email)}</span>
@@ -1242,8 +1067,7 @@ function render() {
       ${renderNotifPanel()}
       <button class="add-btn" id="add-btn">+ Add a Recipe</button>
       <button class="chat-btn" id="chat-btn">✦ Ask Claude for Ideas</button>
-      <button class="import-btn${state.importPanel?' active':''}" id="import-btn">⬇ Import a Recipe</button>
-      ${renderImportPanel()}
+      <button class="plan-btn${state.view==='mealplan'?' active':''}" id="plan-btn">📅 Plan This Week</button>
       <button class="pantry-btn${state.pantryPanel?' active':''}" id="pantry-btn">🥕 My Pantry${state.pantry.length?` (${state.pantry.length})`:''}</button>
       ${renderPantryPanel()}
       <div class="search-wrap">
@@ -1271,10 +1095,13 @@ function render() {
       ${state.successMsg?`<div class="success-msg fade-in">✓ ${esc(state.successMsg)}</div>`:''}
       ${state.view==='form'?renderForm():''}
       ${state.view==='detail'&&state.selected?renderDetail(state.selected):''}
+      ${state.view==='mealplan'?renderMealPlanView():''}
       ${state.view==='list'?`<div class="empty-state"><div class="icon">🍳</div><h2>Select a recipe to view it</h2><p>Or ask Claude for inspiration.</p></div>`:''}
     </div>
 
     ${state.showChat?`<div class="chat-panel${mobile?' mobile-open':''}">${renderChatPanelInner()}</div>`:''}
+    ${state.importPanel ? renderImportModal() : ''}
+    ${state.recipeModal ? renderRecipeModal() : ''}
 
     ${mobile ? `
     <nav class="bottom-nav">
@@ -1417,7 +1244,10 @@ function renderForm() {
   const f=state.form;
   return `<div class="form-wrap fade-in">
     ${state.formError?`<div class="error-msg">⚠ ${esc(state.formError)}</div>`:''}
-    <h2 class="form-title">${state.editingId?'Edit Recipe':'Add a New Recipe'}</h2>
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:4px;">
+      <h2 class="form-title" style="margin:0;">${state.editingId?'Edit Recipe':'Add a New Recipe'}</h2>
+      ${!state.editingId?`<button class="form-import-btn" id="form-import-btn" type="button">⬇ import a recipe</button>`:''}
+    </div>
     <div class="form-group"><label>Recipe Title</label>
       <input id="f-title" class="form-control" value="${esc(f.title)}" placeholder="e.g. Honey Mustard Roasted Potatoes"></div>
     <div class="form-grid">
@@ -1485,7 +1315,7 @@ function renderChatPanelInner() {
       <button class="close-chat-btn" id="close-chat">✕</button>
     </div>
     <div class="chat-messages" id="chat-messages">
-      ${msgs.length===0?`<div class="chat-msg assistant">Hi! I'm Claude. Tell me what you're in the mood for, what ingredients you have, or ask me to suggest a recipe — I'll come up with something delicious for ${window.APP_CONFIG.ownerNames}. 🍽</div>`:''}
+      ${msgs.length===0?`<div class="chat-msg assistant">Hi! I'm Claude. Tell me what you're in the mood for, what ingredients you have, or ask me to suggest a recipe — I'll come up with something delicious for Demo User. 🍽</div>`:''}
       ${msgs.map(m => {
         const textContent = Array.isArray(m.content)
           ? (m.content.find(b => b.type === 'text')?.text || '')
@@ -1508,6 +1338,150 @@ function renderChatPanelInner() {
     </div>`;
 }
 
+// ── Meal Planner ──────────────────────────────────────────────
+function renderMealPlanView() {
+  const hasPlan = !!state.mealPlan;
+  const hasProposal = !!state.mealPlanProposal;
+  const days = state.mealPlan?.days || [];
+
+  function inPantry(ing) {
+    const l = ing.toLowerCase();
+    return state.pantry.map(p => p.toLowerCase()).some(p => l.includes(p) || p.includes(l.split(' ').find(w => w.length > 3) || l));
+  }
+
+  function renderShopping() {
+    if (!hasPlan) return `<p style="color:var(--text-dim);font-style:italic;font-size:14px;">Finish planning to see the shopping list.</p>`;
+    return `<div class="shopping-list" id="shopping-list">
+      ${days.map((d, di) => `
+        <div class="shopping-day">
+          <div class="shopping-day-header">${esc(d.day)} — ${esc(d.meal)}</div>
+          ${(d.ingredients || []).map((ing, ii) => {
+            const key = `${di}_${ii}`;
+            const checked = !!state.mealPlanChecked[key];
+            const have = inPantry(ing);
+            return `<label class="shopping-item${checked?' checked':''}${have&&!checked?' have-it':''}">
+              <input type="checkbox" class="shop-check" data-key="${key}" ${checked?'checked':''}>
+              ${esc(ing)}
+            </label>`;
+          }).join('')}
+        </div>`).join('')}
+    </div>`;
+  }
+
+  function renderProposalCards() {
+    const pDays = state.mealPlanProposal.days;
+    const acceptedCount = Object.values(state.mealPlanCardState).filter(s => s === 'accepted').length;
+    return `
+      <div class="proposal-cards">
+        ${pDays.map((d, i) => {
+          const cardState = state.mealPlanCardState[i];
+          const linked = d.recipeId ? state.recipes.find(r => r.id === d.recipeId) : null;
+          const img = linked?.imageUrl || state.mealPlanProposalImages[i];
+          return `<div class="proposal-card${cardState==='accepted'?' accepted':''}${cardState==='rejected'?' rejected':''}">
+            ${img
+              ? `<img class="proposal-card-img" src="${esc(img)}" alt="${esc(d.meal)}" loading="lazy">`
+              : `<div class="proposal-card-img-placeholder">🍽</div>`}
+            <div class="proposal-card-body">
+              <div class="proposal-card-day">${esc(d.day)}</div>
+              <div class="proposal-card-meal">${esc(d.meal)}</div>
+              ${linked ? `<span class="proposal-card-link" data-recipe-id="${linked.id}" style="cursor:pointer;">View recipe →</span>` : ''}
+            </div>
+            <div class="proposal-card-btns">
+              <button class="proposal-accept${cardState==='accepted'?' lit':''}" data-day-idx="${i}">${cardState==='accepted'?'✓ Accepted':'✓ Looks good'}</button>
+              ${cardState!=='accepted' ? `<button class="proposal-reject" data-day-idx="${i}">✗ Try another</button>` : ''}
+            </div>
+            ${cardState==='rejected' ? `<div class="proposal-feedback">
+              <input type="text" class="proposal-feedback-input" data-day-idx="${i}" placeholder="What would you prefer?">
+              <button class="proposal-feedback-send" data-day-idx="${i}">Send</button>
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <p class="proposal-hint">${acceptedCount === pDays.length ? '🎉 All set! Switching to your shopping list…' : `${acceptedCount} of ${pDays.length} accepted — accept all to finalize`}</p>`;
+  }
+
+  function renderPlanChat() {
+    const msgs = state.mealPlanMessages;
+    return `<div class="meal-plan-chat">
+      <div class="meal-plan-messages" id="mp-messages">
+        ${msgs.length === 0 ? `<div class="meal-plan-msg assistant">Hi! Let's plan your meals for Monday through Thursday. I can suggest new recipes or pull from your catalog — just tell me what you're in the mood for, any dietary preferences, or what ingredients you have on hand.</div>` : ''}
+        ${msgs.map(m => `<div class="meal-plan-msg ${m.role}">${esc(m.content)}</div>`).join('')}
+        ${hasProposal && !hasPlan ? renderProposalCards() : ''}
+        ${state.mealPlanLoading ? `<div class="meal-plan-msg assistant" style="color:var(--text-dim);font-style:italic;">Thinking…</div>` : ''}
+      </div>
+      <div class="meal-plan-input-row">
+        <textarea class="meal-plan-input" id="mp-input" rows="2" placeholder="${hasProposal?'Add a note or ask for changes…':'Tell me what you\'re in the mood for…'}" ${state.mealPlanLoading?'disabled':''}></textarea>
+        <button class="meal-plan-send" id="mp-send" ${state.mealPlanLoading?'disabled':''}>Send</button>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="meal-plan-view">
+    <div class="meal-plan-header">
+      <h2>📅 This Week's Meals</h2>
+      <button class="meal-plan-clear" id="mp-clear">Start over</button>
+    </div>
+    ${hasPlan ? `<div class="meal-plan-summary">
+      ${days.map(d => {
+        const linked = d.recipeId ? state.recipes.find(r => r.id === d.recipeId) : null;
+        return `<div class="meal-plan-day-card">
+          <div class="day-label">${esc(d.day)}</div>
+          <div class="day-meal">${esc(d.meal)}</div>
+          ${linked ? `<div class="day-link" data-recipe-id="${linked.id}">View recipe →</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+    <div class="meal-plan-tabs">
+      <button class="meal-plan-tab${state.mealPlanView==='chat'?' active':''}" id="mp-tab-chat">Plan with Claude</button>
+      <button class="meal-plan-tab${state.mealPlanView==='shopping'?' active':''}" id="mp-tab-shopping" ${!hasPlan?'disabled':''}>Shopping List</button>
+    </div>
+    ${state.mealPlanView === 'shopping' ? renderShopping() : renderPlanChat()}
+  </div>`;
+}
+
+async function acceptProposalDay(i) {
+  state.mealPlanCardState[i] = 'accepted';
+  const pDays = state.mealPlanProposal.days;
+  const allAccepted = pDays.every((_, idx) => state.mealPlanCardState[idx] === 'accepted');
+  if (allAccepted) {
+    // Short delay so user sees the "All set!" hint before switching
+    render();
+    setTimeout(() => {
+      state.mealPlan = state.mealPlanProposal;
+      state.mealPlanProposal = null;
+      state.mealPlanCardState = {};
+      state.mealPlanView = 'shopping';
+      state.mealPlanChecked = {};
+      render();
+    }, 800);
+  } else {
+    render();
+  }
+}
+
+async function rejectProposalDay(i, feedback) {
+  if (!feedback.trim()) return;
+  const d = state.mealPlanProposal.days[i];
+  const msg = `I don't want ${d.meal} for ${d.day}. ${feedback}. Can you suggest something different and send me an updated plan?`;
+  state.mealPlanProposal = null;
+  state.mealPlanCardState = {};
+  state.mealPlanProposalImages = {};
+  sendMealPlanChat(msg);
+}
+
+async function sendMealPlanChat() { return; }
+
+function renderRecipeModal() {
+  const r = state.recipeModal;
+  if (!r) return '';
+  return `<div class="recipe-modal-backdrop" id="recipe-modal-backdrop">
+    <div class="recipe-modal">
+      <button class="recipe-modal-close" id="recipe-modal-close" title="Close">✕</button>
+      ${renderDetail(r, {readOnly: true})}
+    </div>
+  </div>`;
+}
+
 function bindEvents() {
   const on=(sel,ev,fn)=>document.querySelectorAll(sel).forEach(el=>el.addEventListener(ev,fn));
   const g=id=>document.getElementById(id);
@@ -1524,8 +1498,19 @@ function bindEvents() {
   });
   g("add-btn")?.addEventListener("click",()=>{ startAdd(); mobilePanel="form"; });
   g("chat-btn")?.addEventListener("click",()=>{state.showChat=!state.showChat;render();});
-  g("import-btn")?.addEventListener("click",()=>{ state.importPanel=!state.importPanel; state.importError=null; render(); });
+  g("plan-btn")?.addEventListener("click",()=>{
+    if (state.view === 'mealplan') {
+      state.view = state.selected ? 'detail' : 'list';
+      mobilePanel = state.selected ? 'detail' : 'list';
+    } else {
+      state.view = 'mealplan'; mobilePanel = 'detail';
+    }
+    state.showChat = false; render();
+  });
+  // Import modal — triggered from the form
+  g("form-import-btn")?.addEventListener("click",()=>{ state.importPanel=true; state.importError=null; render(); });
   g("import-cancel-btn")?.addEventListener("click",()=>{ state.importPanel=false; state.importText=""; state.importError=null; render(); });
+  g("import-modal-backdrop")?.addEventListener("click", e=>{ if(e.target===e.currentTarget){ state.importPanel=false; state.importText=""; state.importError=null; render(); } });
   g("import-parse-btn")?.addEventListener("click",()=>{
     const ta=document.getElementById("import-textarea");
     if(ta) state.importText=ta.value;
@@ -1592,15 +1577,13 @@ function bindEvents() {
     state.subResult=null; state.subMode=false; state.editingId=null; state.view='form'; mobilePanel='form'; render();
   });
   g("sub-update-btn")?.addEventListener("click",async()=>{
+    // Demo mode: update in-memory only (no persistence)
     const sr=state.subResult; const r=state.selected; if(!sr||!r) return;
-    try {
-      await updateDoc(doc(db,'recipes',r.id),{components:sr.components,notes:sr.notes||r.notes||'',updatedAt:new Date().toISOString()});
-      state.selected={...r,components:sr.components,notes:sr.notes||r.notes||''};
-      state.recipes=state.recipes.map(rx=>rx.id===r.id?state.selected:rx);
-      state.subResult=null; state.subMode=false;
-      state.successMsg='Recipe updated with substitutions!'; render();
-      setTimeout(()=>{state.successMsg=null;render();},3000);
-    } catch(e){ state.subError='Update failed: '+e.message; render(); }
+    state.selected={...r,components:sr.components,notes:sr.notes||r.notes||''};
+    state.recipes=state.recipes.map(rx=>rx.id===r.id?state.selected:rx);
+    state.subResult=null; state.subMode=false;
+    state.successMsg='Recipe updated with substitutions!'; render();
+    setTimeout(()=>{state.successMsg=null;render();},3000);
   });
   on(".sub-ing-item","click",e=>{ toggleSubIngredient(e.currentTarget.dataset.ing); });
   // Find image button in form
@@ -1629,9 +1612,11 @@ function bindEvents() {
     btn.disabled = true; btn.textContent = '⏳…';
     try {
       const token = await createShareLink(r);
-      const url = `${window.APP_CONFIG.appDomain}/?share=${token}`;
-      await navigator.clipboard.writeText(url);
-      state.successMsg = "Public share link copied!";
+      if (token) {
+        const url = `https://github.com/CJRoberts28/Recipe-Catalog/?share=${token}`;
+        await navigator.clipboard.writeText(url);
+        state.successMsg = "Public share link copied!";
+      }
     } catch(e) {
       state.successMsg = "Share failed. Try again.";
     }
@@ -1688,10 +1673,7 @@ function bindEvents() {
   });
 
   g("signout-btn")?.addEventListener("click", async () => {
-    if (state.user?.uid && state.fcmToken) {
-      try { await deleteDoc(doc(db, 'fcm_tokens', state.user.uid)); } catch(e) {}
-    }
-    signOut(auth);
+    // Demo mode: nothing to sign out of
   });
 
   on(".timer-btn", "click", e => {
@@ -1728,6 +1710,68 @@ function bindEvents() {
     const enabled = document.getElementById('notif-toggle')?.checked ?? false;
     await saveNotifSettings(enabled, parseInt(e.target.value));
     render();
+  });
+
+  // Meal Planner
+  g("mp-tab-chat")?.addEventListener("click", () => { state.mealPlanView = 'chat'; render(); });
+  g("mp-tab-shopping")?.addEventListener("click", () => { if (state.mealPlan) { state.mealPlanView = 'shopping'; render(); } });
+  g("mp-clear")?.addEventListener("click", () => {
+    state.mealPlan = null; state.mealPlanMessages = []; state.mealPlanChecked = {};
+    state.mealPlanProposal = null; state.mealPlanCardState = {}; state.mealPlanProposalImages = {};
+    state.mealPlanView = 'chat'; render();
+  });
+  const mpInput = g("mp-input");
+  const mpSend = g("mp-send");
+  if (mpInput && mpSend) {
+    const doMpSend = () => { const msg = mpInput.value.trim(); if (!msg || state.mealPlanLoading) return; mpInput.value = ""; sendMealPlanChat(msg); };
+    mpSend.addEventListener("click", doMpSend);
+    mpInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); doMpSend(); } });
+  }
+  document.querySelectorAll(".shop-check").forEach(cb => {
+    cb.addEventListener("change", e => {
+      const key = e.target.dataset.key;
+      state.mealPlanChecked[key] = e.target.checked;
+      const label = e.target.closest(".shopping-item");
+      if (label) { label.classList.toggle("checked", e.target.checked); label.classList.toggle("have-it", false); }
+    });
+  });
+  document.querySelectorAll(".day-link").forEach(el => {
+    el.addEventListener("click", () => {
+      const r = state.recipes.find(r => r.id === el.dataset.recipeId);
+      if (r) { state.selected = r; state.view = 'detail'; mobilePanel = 'detail'; render(); }
+    });
+  });
+  document.querySelectorAll(".proposal-card-link").forEach(el => {
+    el.addEventListener("click", () => {
+      const r = state.recipes.find(r => r.id === el.dataset.recipeId);
+      if (r) { state.recipeModal = r; render(); }
+    });
+  });
+  // Recipe modal close
+  g("recipe-modal-close")?.addEventListener("click", () => { state.recipeModal = null; render(); });
+  g("recipe-modal-backdrop")?.addEventListener("click", e => {
+    if (e.target === e.currentTarget) { state.recipeModal = null; render(); }
+  });
+  // Proposal card accept/reject
+  document.querySelectorAll(".proposal-accept").forEach(btn => {
+    btn.addEventListener("click", () => acceptProposalDay(+btn.dataset.dayIdx));
+  });
+  document.querySelectorAll(".proposal-reject").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.mealPlanCardState[+btn.dataset.dayIdx] = 'rejected'; render();
+      setTimeout(() => document.querySelector(`.proposal-feedback-input[data-day-idx="${btn.dataset.dayIdx}"]`)?.focus(), 50);
+    });
+  });
+  document.querySelectorAll(".proposal-feedback-send").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const inp = document.querySelector(`.proposal-feedback-input[data-day-idx="${btn.dataset.dayIdx}"]`);
+      if (inp) rejectProposalDay(+btn.dataset.dayIdx, inp.value);
+    });
+  });
+  document.querySelectorAll(".proposal-feedback-input").forEach(inp => {
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") rejectProposalDay(+inp.dataset.dayIdx, inp.value);
+    });
   });
 }
 </script>
