@@ -58,7 +58,13 @@ Edit `firestore.rules` — replace the placeholder emails with the Google accoun
 'partner@gmail.com'
 ```
 
-Edit `.firebaserc` — replace `YOUR_PROJECT_ID` with your actual Firebase project ID:
+Copy `.firebaserc.example` to `.firebaserc` and fill in your project ID:
+
+```bash
+cp .firebaserc.example .firebaserc
+```
+
+Then edit `.firebaserc`:
 
 ```json
 {
@@ -68,19 +74,34 @@ Edit `.firebaserc` — replace `YOUR_PROJECT_ID` with your actual Firebase proje
 }
 ```
 
-### 7. Deploy Firestore rules
+### 7. Create your Firestore database
+
+1. In Firebase Console, go to **Firestore Database**
+2. Click **Create database**
+3. Choose **Start in production mode** (your rules from step 6 will lock it down)
+4. Select a region close to your users and click **Enable**
+
+### 8. Deploy Firestore rules
 
 ```bash
 firebase login
 firebase deploy --only firestore:rules
 ```
 
-### 8. Get your Anthropic API key
+### 9. Get your Anthropic API key
 
 1. Go to [console.anthropic.com](https://console.anthropic.com/)
 2. Create an API key
 
-### 9. Set the Anthropic API key as a Firebase Secret
+### 10. Upgrade Firebase to the Blaze plan
+
+Cloud Functions require Firebase's **Blaze (pay-as-you-go)** plan. The free Spark plan does not support them.
+
+1. In Firebase Console, go to the gear icon > **Usage and billing**
+2. Click **Modify plan** and select **Blaze**
+3. Add a billing account (you won't be charged unless usage exceeds the free tier, which is generous for personal use)
+
+### 11. Set the Anthropic API key as a Firebase Secret
 
 ```bash
 firebase functions:secrets:set ANTHROPIC_API_KEY
@@ -88,9 +109,9 @@ firebase functions:secrets:set ANTHROPIC_API_KEY
 
 Paste your API key when prompted.
 
-### 10. Deploy Cloud Functions and copy the proxy URL
+### 12. Deploy Cloud Functions and copy the proxy URL
 
-Before deploying, open `functions/index.js` and replace `YOUR_PROJECT_ID` in the `baseUrl` variable with your actual Firebase project ID. This is used for push notification deep links.
+Before deploying, open `functions/index.js` and replace `YOUR_PROJECT_ID` in the `APP_DOMAIN` variable with your actual Firebase project ID. This is used for push notification deep links.
 
 ```bash
 firebase deploy --only functions
@@ -104,14 +125,14 @@ https://us-central1-YOUR_PROJECT_ID.cloudfunctions.net/claudeProxy
 
 Copy this URL and paste it into `config.js` as the value for `claudeProxyUrl`.
 
-### 11. Get your VAPID key for push notifications
+### 13. Get your VAPID key for push notifications
 
 1. In Firebase Console, go to **Project Settings > Cloud Messaging**
 2. Scroll to **Web Push certificates**
 3. Click **Generate key pair**
 4. Copy the key and paste it into `config.js` as the value for `vapidKey`
 
-### 12. Deploy the app
+### 14. Deploy the app
 
 ```bash
 firebase deploy --only hosting
@@ -119,13 +140,13 @@ firebase deploy --only hosting
 
 Your app is now live at `https://YOUR_PROJECT_ID.web.app`.
 
-### 13. Authorize your domain
+### 15. Authorize your domain
 
 1. In Firebase Console, go to **Authentication > Settings > Authorized domains**
 2. Click **Add domain**
 3. Enter `YOUR_PROJECT_ID.web.app`
 
-### 14. Add users to Firestore
+### 16. Add users to Firestore
 
 For each email address you added to `firestore.rules`:
 
@@ -137,9 +158,9 @@ For each email address you added to `firestore.rules`:
 
 Repeat for each user.
 
-### 15. Set up GitHub Actions auto-deploy (optional)
+### 17. Set up GitHub Actions auto-deploy (optional)
 
-This repo includes workflows that automatically deploy when you push to `main`.
+You can configure GitHub Actions to automatically deploy to Firebase when you push to `main`.
 
 1. Generate a Firebase CI token:
    ```bash
@@ -151,9 +172,9 @@ This repo includes workflows that automatically deploy when you push to `main`.
    - Add a **Secret**: `FIREBASE_TOKEN` = (paste the token)
    - Add a **Variable**: `FIREBASE_PROJECT_ID` = your Firebase project ID
 
-From now on, pushing to `main` will automatically deploy hosting, functions (when `functions/**` changes), and Firestore rules (when `firestore.rules` changes).
+3. Create `.github/workflows/firebase-deploy.yml` with a workflow that runs `firebase deploy` on push to `main`. The Firebase CLI docs have a ready-made example.
 
-### 16. Customize app branding
+### 18. Customize app branding
 
 In `config.js`, update:
 - `appName` — shown in the browser tab, sidebar, login screen, and notifications

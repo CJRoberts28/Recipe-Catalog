@@ -5,13 +5,13 @@ service cloud.firestore {
     function isWhitelisted() {
       return request.auth != null &&
         request.auth.token.email in [
-          // Add your users' Google account email addresses here
-          'user1@example.com',
-          'user2@example.com'
+          // Add your users' Google account email addresses here (see SETUP.md step 6)
+          // 'you@gmail.com',
+          // 'partner@gmail.com'
         ];
     }
 
-    // Recipe catalog — full access for both users
+    // Recipe catalog — full access for whitelisted users
     match /recipes/{recipeId} {
       allow read, write: if isWhitelisted();
     }
@@ -26,7 +26,7 @@ service cloud.firestore {
       allow read, write, delete: if isWhitelisted() && request.auth.uid == uid;
     }
 
-    // Pantry — shared between both users
+    // Pantry — shared between all users
     match /pantry/{docId} {
       allow read, write: if isWhitelisted();
     }

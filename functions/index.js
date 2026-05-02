@@ -6,7 +6,7 @@
 // Functions:
 //   claudeProxy              — HTTP proxy to Anthropic API (used by chat UI)
 //   sendDinnerSuggestion     — Hourly scheduled function; sends daily push notification with a Claude-generated dinner idea
-//   getCustomToken           — Callable: exchanges a verified session for a custom token (used for cross-app SSO)
+//   getCustomToken           — Callable: exchanges a verified session for a custom token (cross-app SSO)
 
 const { onRequest, onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -20,6 +20,10 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 const PROXY_MODEL = "claude-sonnet-4-20250514";
 const PROXY_MAX_TOKENS = 1000;
+
+// Your app's Firebase Hosting URL — used for push notification deep links.
+// Replace YOUR_PROJECT_ID with your actual Firebase project ID (see SETUP.md step 10).
+const APP_DOMAIN = "https://YOUR_PROJECT_ID.web.app";
 
 // ── claudeProxy ───────────────────────────────────────────────────────────────
 // Receives {model, max_tokens, system, messages} from the frontend and proxies
@@ -79,7 +83,7 @@ exports.claudeProxy = onRequest(
 // ── sendDinnerSuggestion ──────────────────────────────────────────────────────
 // Runs at the top of every hour (America/New_York). Checks Firestore for the
 // configured notification hour and, if it matches, asks Claude Haiku to suggest
-// a dinner based on the recipe catalog, then sends an FCM push to both users.
+// a dinner based on the recipe catalog, then sends an FCM push to all users.
 //
 // Firestore reads:
 //   settings/notifications  — { enabled, hour, lastSent }
@@ -166,11 +170,11 @@ exports.sendDinnerSuggestion = onSchedule(
     const allTitles = recipes.map(r => r.title).join(", ") || "(none)";
 
     const systemPrompt = `You are a dinner suggestion assistant for a private recipe catalog.
-Suggest one specific dinner for tonight. Either revisit a recipe you love or propose something new that fits your taste.
+Suggest one specific dinner for tonight. Either revisit a recipe they love or propose something new that fits their taste.
 Keep it very short: one sentence for the suggestion name and one sentence explaining why it fits tonight.
 Do not include JSON or recipe tags. Be warm and direct.`;
 
-    const userMessage = `Your top-rated and favorite recipes:\n${catalogSummary}\n\nAll recipe titles (for context — don't just repeat these):\n${allTitles}\n\nWhat should you make for dinner tonight?`;
+    const userMessage = `Top-rated and favorite recipes:\n${catalogSummary}\n\nAll recipe titles (for context — don't just repeat these):\n${allTitles}\n\nWhat should they make for dinner tonight?`;
 
     // 7. Call Claude Haiku for the suggestion
     const anthropicRes = await fetch(ANTHROPIC_URL, {
@@ -202,11 +206,9 @@ Do not include JSON or recipe tags. Be warm and direct.`;
     const mentionedRecipe = recipes.find(r =>
       suggestion.toLowerCase().includes(r.title.toLowerCase())
     );
-    // Replace YOUR_PROJECT_ID with your Firebase project ID, or load from an environment variable
-    const baseUrl = "https://YOUR_PROJECT_ID.web.app/";
     const deepLink = mentionedRecipe
-      ? `${baseUrl}?recipeId=${mentionedRecipe.id}`
-      : `${baseUrl}?chat=1`;
+      ? `${APP_DOMAIN}/?recipeId=${mentionedRecipe.id}`
+      : `${APP_DOMAIN}/?chat=1`;
     const notifData = mentionedRecipe
       ? { type: "existing_recipe", recipeId: mentionedRecipe.id }
       : { type: "new_idea" };
@@ -221,8 +223,8 @@ Do not include JSON or recipe tags. Be warm and direct.`;
       data: notifData,
       webpush: {
         notification: {
-          icon: "https://YOUR_PROJECT_ID.web.app/favicon.svg",
-          badge: "https://YOUR_PROJECT_ID.web.app/favicon.svg",
+          icon: `${APP_DOMAIN}/favicon.svg`,
+          badge: `${APP_DOMAIN}/favicon.svg`,
           requireInteraction: false,
         },
         fcmOptions: {
@@ -265,9 +267,9 @@ Do not include JSON or recipe tags. Be warm and direct.`;
 );
 
 // ── getCustomToken ────────────────────────────────────────────────────────────
-// Callable function used for cross-app SSO. A signed-in user in another app
-// calls this to get a short-lived custom token, which is then passed via URL
-// param so the user doesn't need to sign in twice.
+// Callable function for cross-app SSO. A signed-in user on another app in your
+// Firebase project calls this to get a short-lived custom token, which is then
+// passed to this app via URL param so the user doesn't need to sign in twice.
 exports.getCustomToken = onCall(async (request) => {
   if (!request.auth) {
     throw new Error("unauthenticated");
