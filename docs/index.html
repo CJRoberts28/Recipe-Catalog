@@ -595,13 +595,6 @@ function formatStep(s, ingredients, scaleFactor=1) {
 async function signIn() {
 }
 
-// Demo mode: skip auth, go straight to the app
-(async () => {
-  state.user = { displayName: 'Demo User', email: 'demo@example.com', photoURL: null };
-  await loadRecipes();
-  render();
-})(); // end handleShareLink().then
-
 // ── Notifications ─────────────────────────────────────────
 
 
@@ -856,6 +849,13 @@ const STATIC_RECIPES = [
 async function loadRecipes() {
   state.recipes = STATIC_RECIPES;
 }
+
+// Demo mode: skip auth, go straight to the app
+(async () => {
+  state.user = { displayName: 'Demo User', email: 'demo@example.com', photoURL: null };
+  await loadRecipes();
+  render();
+})();
 
 // ── Pantry ────────────────────────────────────────────────
 async function loadPantry() { state.pantry = []; }
